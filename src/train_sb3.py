@@ -6,8 +6,9 @@ from pathlib import Path
 import numpy as np
 import pygame
 from stable_baselines3 import PPO
-from stable_baselines3.common.callbacks import BaseCallback, CallbackList, CheckpointCallback
+from stable_baselines3.common.callbacks import BaseCallback, CallbackList, CheckpointCallback, EvalCallback
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 from envs.race_track_env import RaceTrackEnv
 
@@ -369,7 +370,7 @@ def parse_args():
     parser.add_argument(
         "--preview-style",
         choices=["swarm", "policy"],
-        default="swarm",
+        default="policy",
         help="Training preview style. 'swarm' shows many random-command cars, 'policy' shows single-agent behavior.",
     )
     parser.add_argument("--swarm-size", type=int, default=140, help="Number of cars in swarm preview.")
@@ -387,20 +388,46 @@ def main():
     models_dir.mkdir(parents=True, exist_ok=True)
     logs_dir.mkdir(parents=True, exist_ok=True)
 
-    env = Monitor(RaceTrackEnv(render_mode=None, dynamics_mode=args.dynamics_mode))
+    env = RaceTrackEnv(render_mode=None, dynamics_mode=args.dynamics_mode)
+    env = Monitor(env)
+    vec_env = DummyVecEnv([lambda: env])
+    vec_env = VecNormalize(vec_env, norm_obs=True, norm_reward=True, clip_obs=10.)
 
+    # Create Evaluation Env (To save the best model)
+    eval_env = RaceTrackEnv(render_mode=None, dynamics_mode=args.dynamics_mode)
+    eval_env = Monitor(eval_env)
+    eval_vec_env = DummyVecEnv([lambda: eval_env])
+    eval_vec_env = VecNormalize(eval_vec_env, norm_obs=True, norm_reward=False, clip_obs=10., training=False)
+
+    # Hyperparameter-optimized PPO Model
     model = PPO(
         policy="MlpPolicy",
-        env=env,
+        env=vec_env,
         verbose=1,
         tensorboard_log=str(logs_dir / args.log_name),
         learning_rate=args.learning_rate,
         n_steps=args.n_steps,
         batch_size=args.batch_size,
+        n_epochs=10,
+        gamma=0.99,
+        gae_lambda=0.95,
+        ent_coef=0.01, # Entropy coefficient to increase exploration
+        clip_range=0.2,
         seed=args.seed,
     )
 
+    # Callbacks
+    eval_callback = EvalCallback(
+        eval_vec_env,
+        best_model_save_path=str(models_dir / "best_model"),
+        log_path=str(logs_dir / "eval_logs"),
+        eval_freq=max(1, args.checkpoint_freq // 5),
+        deterministic=True,
+        render=False,
+    )
+    
     callbacks = [
+        eval_callback,
         CheckpointCallback(
             save_freq=max(1, args.checkpoint_freq),
             save_path=str(models_dir),

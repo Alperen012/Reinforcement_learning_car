@@ -76,22 +76,13 @@ class RaceTrackEnv(gym.Env):
         self.physics_angular_damping = 0.88
 
         # Observation: [x, y, angle, speed, ray1..ray5]
+        # (NORMALIZED to roughly [-1.0, 1.0] ranges for PPO)
         low = np.array(
-            [0.0, 0.0, -np.inf, -self.max_reverse_speed, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, -1.0, -0.5, 0.0, 0.0, 0.0, 0.0, 0.0],
             dtype=np.float32,
         )
         high = np.array(
-            [
-                float(self.window_size),
-                float(self.window_size),
-                np.inf,
-                self.max_speed,
-                self.max_lidar_distance,
-                self.max_lidar_distance,
-                self.max_lidar_distance,
-                self.max_lidar_distance,
-                self.max_lidar_distance,
-            ],
+            [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
             dtype=np.float32,
         )
         self.observation_space = gym.spaces.Box(low=low, high=high, dtype=np.float32)
@@ -99,31 +90,18 @@ class RaceTrackEnv(gym.Env):
         self.max_steps = 3000
         self.current_step = 0
 
-        # Nürburgring Nordschleife approximated checkpoints
+        # Simple Oval / Rectangular Track (For faster and stable PPO learning)
         self.checkpoints = [
-            (250, 750),  # Start/Finish
-            (150, 700),
-            (100, 550),
-            (150, 400),
-            (250, 350),
-            (150, 250),
-            (250, 150),
-            (400, 150),
-            (450, 250),
-            (350, 350),
-            (450, 450),
-            (650, 350),
-            (800, 250),
-            (900, 150),
-            (950, 300),
-            (850, 450),
-            (950, 550),
-            (850, 650),
-            (900, 800),
-            (600, 850),
-            (400, 850),
+            (200, 500),  # Start
+            (200, 200),  # Top-Left corner start
+            (500, 200),  # Top-Mid straight
+            (800, 200),  # Top-Right corner
+            (800, 500),  # Right-Mid straight
+            (800, 800),  # Bottom-Right corner
+            (500, 800),  # Bottom-Mid straight
+            (200, 800),  # Bottom-Left corner
         ]
-        self.checkpoint_radius = 50
+        self.checkpoint_radius = 80
         self.laps_completed = 0
 
         self._init_track()
@@ -131,18 +109,22 @@ class RaceTrackEnv(gym.Env):
     def _init_track(self):
         pygame.init()
         self.track_surface = pygame.Surface((self.window_size, self.window_size))
-        self.track_surface.fill((0, 0, 0))
+        self.track_surface.fill((0, 0, 0)) # Wall (Black)
 
-        pygame.draw.lines(self.track_surface, (255, 255, 255), True, self.checkpoints, 80)
+        # Draw the track path (White - Simple oval with wide thickness)
+        pygame.draw.lines(self.track_surface, (255, 255, 255), True, self.checkpoints, 120)
+        # Draw circles at the corners to round the turns
         for p in self.checkpoints:
-            pygame.draw.circle(self.track_surface, (255, 255, 255), p, 40)
+            pygame.draw.circle(self.track_surface, (255, 255, 255), p, 60)
 
         # Fast memory mapping to read track collisions
         self.track_data = pygame.surfarray.pixels2d(self.track_surface)
 
-        self.start_x = 250.0
-        self.start_y = 750.0
-        self.start_angle = -2.6
+        # Starting position (slightly behind the first checkpoint)
+        self.start_x = 200.0
+        self.start_y = 600.0
+        # Facing upwards (-pi/2)
+        self.start_angle = -np.pi / 2.0
 
     def _init_physics_world(self):
         if self._pymunk is None:
@@ -342,6 +324,15 @@ class RaceTrackEnv(gym.Env):
 
         self.speed = clipped_speed
 
+    def _get_obs(self):
+        return np.array([
+            self.x / self.window_size,
+            self.y / self.window_size,
+            self.angle / np.pi,
+            self.speed / self.max_speed,
+            *(self.lidar_distances / self.max_lidar_distance)
+        ], dtype=np.float32)
+
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         self.set_overlay_lines(None)
@@ -364,7 +355,7 @@ class RaceTrackEnv(gym.Env):
         self.trail = []
 
         self.lidar_distances = self._get_lidar_distances()
-        obs = np.array([self.x, self.y, self.angle, self.speed, *self.lidar_distances], dtype=np.float32)
+        obs = self._get_obs()
         return obs, {}
 
     def step(self, action):
@@ -400,6 +391,7 @@ class RaceTrackEnv(gym.Env):
             dist_to_cp = math.hypot(self.x - target_cp[0], self.y - target_cp[1])
 
             progress = self.prev_dist_to_cp - dist_to_cp
+            progress = max(-2.0, min(10.0, progress)) # Capping to prevent huge penalties from backward movements
             reward += progress * 0.5
             self.prev_dist_to_cp = dist_to_cp
 
@@ -419,7 +411,7 @@ class RaceTrackEnv(gym.Env):
             truncated = True
 
         self.lidar_distances = self._get_lidar_distances()
-        obs = np.array([self.x, self.y, self.angle, self.speed, *self.lidar_distances], dtype=np.float32)
+        obs = self._get_obs()
         info = {
             "laps": self.laps_completed,
             "dynamics_mode": self.dynamics_mode,
@@ -445,8 +437,8 @@ class RaceTrackEnv(gym.Env):
 
             self.window.fill((10, 12, 20))
 
-            # 1) Track
-            pygame.draw.lines(self.window, (30, 40, 100), True, self.checkpoints, 94)
+            # 1) Track (Mavi hat - geniş)
+            pygame.draw.lines(self.window, (30, 40, 100), True, self.checkpoints, 120)
             for p in self.checkpoints:
                 pygame.draw.circle(self.window, (30, 40, 100), p, 47)
 
