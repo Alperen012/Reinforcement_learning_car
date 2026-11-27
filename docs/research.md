@@ -2,8 +2,8 @@
 
 This note records what was studied before redesigning the project, and why
 some ideas were adopted and others were not. Star counts were read from the
-GitHub API on 2026-11-27. The descriptions of each project come from their
-public repositories and documentation.
+GitHub API on 2026-11-27. The descriptions are summarised from each project's
+README and documentation.
 
 ## A. Reinforcement-learning libraries and environments
 

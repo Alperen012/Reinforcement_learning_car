@@ -35,12 +35,13 @@ def evaluate(spec: str, env_cfg: EnvConfig, tracks: list[str], algo: str = "ppo"
     return summarize(run_episodes(policy, pol_env, tracks, episodes=episodes, seed=EVAL_SEED))
 
 
-def per_seed(exp: str, env_cfg: EnvConfig, tracks: list[str], episodes: int = EPISODES):
+def per_seed(exp: str, env_cfg: EnvConfig, tracks: list[str], episodes: int = EPISODES, model: str = ""):
+    """``model=""`` evaluates best_model.zip; ``model="final_model.zip"`` the last weights."""
     rows, secs = [], []
     for seed_dir in sorted((RUNS / exp).glob("seed*")):
         if not (seed_dir / "run.json").exists():
             continue
-        rows.append(evaluate(str(seed_dir), env_cfg, tracks, episodes=episodes))
+        rows.append(evaluate(str(seed_dir / model) if model else str(seed_dir), env_cfg, tracks, episodes=episodes))
         secs.append(json.loads((seed_dir / "run.json").read_text())["train_seconds"])
     return rows, secs
 
@@ -66,7 +67,11 @@ def main():
           f"* Hardware: {platform.processor() or platform.machine()}, CPU only (PyTorch CPU build).",
           f"* Each number: {EPISODES} evaluation episodes per agent (random start points, seeds "
           f"{EVAL_SEED}..{EVAL_SEED + EPISODES - 1}, max 2000 steps), deterministic actions.",
-          "* Trained agents: the best checkpoint of each training seed; **mean ± std across seeds**.",
+          "* Trained agents: the best checkpoint of each training seed; **mean ± std across seeds**. "
+          "The best checkpoint was chosen during training on `classic` with *different* start seeds "
+          "(10000+), so start positions here are new but the track is not.",
+          "* Training times were measured with two training jobs running in parallel (4 threads each) "
+          "on the same laptop: treat them as rough upper bounds.",
           "* Flat out (8 px/step) *along the centre line*, 2000 steps would be ~6.2 laps of `classic` "
           "(2589 px). Good agents beat that by taking the inside line through corners: progress is "
           "measured on the centre line, and the inside of a bend is shorter. That is a racing line, not a "
@@ -103,13 +108,16 @@ def main():
                           fmt([r], "crash_rate", pct=True)])
         for exp, name in [("ppo_classic", "PPO trained on `classic` only"),
                           ("ppo_generalize", "PPO trained on random tracks")]:
-            rows, _ = per_seed(exp, env_cfg, UNSEEN, episodes=3)
+            # final_model, not best_model: ppo_generalize picks its best checkpoint on eval tracks that
+            # overlap this test set, which would leak test performance into model selection.
+            rows, _ = per_seed(exp, env_cfg, UNSEEN, episodes=3, model="final_model.zip")
             if rows:
                 lines.append([f"{name} ({len(rows)} seeds)", fmt(rows, "laps_mean", d=2),
                               fmt(rows, "lap_fraction_mean", d=2), fmt(rows, "crash_rate", pct=True)])
         md += ["## Generalisation", "",
                f"Evaluated on tracks never used for training: {', '.join(f'`{t}`' for t in UNSEEN)} "
-               "(3 episodes each).", "",
+               "(3 episodes each). Agents are evaluated with their **final** weights (not the best "
+               "checkpoint), so no test track influenced which model is reported.", "",
                table(["policy", "laps", "laps incl. partial", "crash rate"], lines), ""]
 
     md += ["## Reproduce", "", "```bash", "pip install -e .", "./scripts/run_benchmarks.ps1   # or run the "

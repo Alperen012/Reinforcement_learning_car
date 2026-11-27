@@ -81,9 +81,10 @@ A **policy** maps observation → action. Ours is a small neural network
 high returns become more likely.
 
 Try this in the playground: select the agent and drag the **training stage**
-slider to *untrained*. Same network shape, random weights: it wobbles and
-crashes. Drag it to *fully trained*: it races. Everything in between is what
-RL did.
+slider. *Untrained* (same network, random weights) barely moves: its outputs
+hover around zero throttle. After 25,000 steps it drives off, but into the
+first wall. *Fully trained*, it races the line at top speed. Everything in
+between is what RL did.
 
 ## Exploration
 

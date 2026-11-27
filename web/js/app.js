@@ -363,12 +363,12 @@
       if (best >= 0) select(best);
     });
 
-    // Default line-up: a trained agent racing its own untrained self, if any agent was exported.
+    // Default line-up: a trained agent racing an early (still crashing) version of itself.
     const names = Object.keys(MODELS).sort((a, b) => (b === "PPO") - (a === "PPO"));  // PPO first if present
     if (names.length) {
       const m = MODELS[names[0]];
       state.racers.push(makeRacer("model:" + names[0]));
-      if (m.stages.length > 1) state.racers.push(makeRacer("model:" + names[0], 0));
+      if (m.stages.length > 1) state.racers.push(makeRacer("model:" + names[0], Math.min(1, m.stages.length - 2)));
     } else {
       state.racers.push(makeRacer("heuristic"));
       state.racers.push(makeRacer("random"));
