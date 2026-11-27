@@ -1,0 +1,13 @@
+# A 1-2 minute run on a laptop CPU: enough to watch a car go from crashing to driving.
+name = "quickstart"
+algo = "ppo"
+
+[env]
+track = "oval"
+
+[train]
+total_timesteps = 100_000
+n_envs = 8
+seeds = [0]
+eval_freq = 10_000
+eval_episodes = 3

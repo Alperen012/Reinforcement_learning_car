@@ -1,0 +1,15 @@
+# Generalisation: train on a new procedurally generated track every episode, then
+# evaluate on tracks the agent has never seen (random:0..999 are never used for training).
+name = "ppo_generalize"
+algo = "ppo"
+
+[env]
+track = "random"
+
+[train]
+total_timesteps = 1_000_000
+n_envs = 8
+seeds = [0, 1]
+eval_freq = 50_000
+eval_episodes = 2
+eval_tracks = ["random:0", "random:1", "random:2", "random:3", "classic", "hairpin", "snake"]

@@ -159,6 +159,11 @@ cython_debug/
 Thumbs.db
 
 # Reinforcement Learning / Project specific
-logs/
-models/
+# (web/models/ holds exported agents and IS committed)
+/logs/
+/models/
+/runs*/
 *.zip
+*.gif
+!docs/assets/*.gif
+/*.png

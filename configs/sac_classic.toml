@@ -1,0 +1,13 @@
+# SAC: off-policy, keeps a replay buffer of past experience and reuses it many times.
+# Usually needs far fewer environment steps than PPO, but each step costs more compute.
+name = "sac_classic"
+algo = "sac"
+
+[env]
+track = "classic"
+
+[train]
+total_timesteps = 150_000
+n_envs = 4
+seeds = [0, 1, 2]
+eval_freq = 15_000

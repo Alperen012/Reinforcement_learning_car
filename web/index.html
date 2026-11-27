@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Racing Gym Playground</title>
+  <meta name="description" content="Watch reinforcement-learning agents learn to race, race them yourself, and poke at their rewards and physics. Runs entirely in your browser.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">🏁</span>
+    <div>
+      <h1>Racing Gym <span class="tag">playground</span></h1>
+      <p class="sub">Reinforcement-learning agents learning to race. Everything runs in your browser.</p>
+    </div>
+  </div>
+  <nav class="links">
+    <a href="../docs/tutorials/01-what-is-rl.md">Learn RL</a>
+    <a href="../README.md">Train your own</a>
+  </nav>
+</header>
+
+<main class="layout">
+  <section class="stage">
+    <div class="toolbar" role="toolbar" aria-label="Simulation controls">
+      <button id="btn-play" class="primary" title="Space">⏸ Pause</button>
+      <button id="btn-reset" title="R">↺ Restart race</button>
+      <label>Speed
+        <select id="sim-speed">
+          <option value="0.25">¼×</option><option value="0.5">½×</option><option value="1" selected>1×</option>
+          <option value="2">2×</option><option value="4">4×</option><option value="10">10×</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" id="show-lidar" checked> lidar</label>
+      <label class="check"><input type="checkbox" id="show-trails" checked> trails</label>
+      <label class="check"><input type="checkbox" id="show-center"> centre line</label>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="view" width="1000" height="1000" aria-label="Race track view"></canvas>
+      <div id="banner" class="banner" hidden></div>
+    </div>
+    <p class="hint">Add a racer called <b>You</b> to drive with the arrow keys or WASD. Click a car or a racer in the list to inspect it.</p>
+  </section>
+
+  <aside class="side">
+    <div class="card">
+      <h2>Racers</h2>
+      <ul id="racer-list" class="racers"></ul>
+      <div class="add-racer">
+        <select id="add-kind" aria-label="Driver to add"></select>
+        <button id="btn-add">+ Add</button>
+      </div>
+      <div id="stage-box" class="stage-box" hidden>
+        <label for="stage">Training stage of <b id="stage-racer"></b></label>
+        <input type="range" id="stage" min="0" max="0" step="1">
+        <div class="stage-meta"><span id="stage-label"></span><span id="stage-return"></span></div>
+        <label class="check"><input type="checkbox" id="stage-auto"> step through the stages, one episode each</label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Track</h2>
+      <div class="row">
+        <select id="track" aria-label="Track"></select>
+        <input id="seed" type="number" value="7" min="0" step="1" aria-label="Random track seed" title="seed for random tracks">
+        <button id="btn-random" title="Generate a random track">🎲</button>
+      </div>
+    </div>
+
+    <div class="card inspector">
+      <h2>Inside <span id="insp-name">the agent</span>'s head</h2>
+      <h3>What it does <small>(action)</small></h3>
+      <div id="insp-action" class="bars"></div>
+      <h3>Why it gets rewarded <small>(this step · this episode)</small></h3>
+      <div id="insp-reward" class="bars"></div>
+      <h3>What it sees <small>(observation)</small></h3>
+      <div id="insp-obs" class="bars small"></div>
+      <h3>Episode returns <small>(green: still racing, red: crashed)</small></h3>
+      <canvas id="history" width="300" height="70" aria-label="Return of recent episodes"></canvas>
+    </div>
+
+    <details class="card">
+      <summary><h2>Car physics</h2></summary>
+      <p class="note">Agents were trained with the default car. Change it and watch them struggle: that is <i>distribution shift</i>.</p>
+      <div id="car-sliders" class="sliders"></div>
+    </details>
+
+    <details class="card">
+      <summary><h2>Reward weights</h2></summary>
+      <p class="note">These change the reward you <i>see</i>, not how trained agents drive (they learned from the defaults).
+        To change behaviour, retrain, e.g. <code>racing-gym train -c configs/ppo_classic.toml -s env.reward.crash=0</code>.</p>
+      <div id="reward-sliders" class="sliders"></div>
+    </details>
+
+    <details class="card learn" open>
+      <summary><h2>How it works</h2></summary>
+      <dl>
+        <dt>Agent &amp; policy</dt>
+        <dd>The driver is a small neural network (17 inputs → 64 → 64 → 2 outputs). It maps what it sees to what it does. Nobody wrote driving rules into it.</dd>
+        <dt>Observation</dt>
+        <dd>9 lidar rays (distance to the track edge), speed, wheel angle, how far it points away from the track direction, how far it is from the centre line, and how much the track bends ahead.</dd>
+        <dt>Action</dt>
+        <dd>Two numbers in [-1, 1]: steering and throttle (negative throttle brakes, then reverses).</dd>
+        <dt>Reward</dt>
+        <dd>+1 per 10 px of progress along the track, −0.05 per step, −20 for leaving the track, +10 per lap. The agent only ever sees these numbers. Learning means finding behaviour that makes their sum large.</dd>
+        <dt>Training</dt>
+        <dd>Drag the <b>training stage</b> slider: the untrained network steers almost at random, and a few thousand crashes later it races. That is reinforcement learning.</dd>
+      </dl>
+    </details>
+  </aside>
+</main>
+
+<footer class="foot">
+  <span>Racing Gym · trained with <a href="https://github.com/DLR-RM/stable-baselines3">Stable-Baselines3</a> · simulator mirrored from the Python package</span>
+</footer>
+
+<script src="js/sim.js"></script>
+<script src="models/manifest.js"></script>
+<script>
+  // Load every exported model listed in models/manifest.js, then start the app.
+  (function () {
+    var files = window.RG_MODEL_FILES || [], left = files.length;
+    function start() { var s = document.createElement("script"); s.src = "js/app.js"; document.body.appendChild(s); }
+    if (!left) return start();
+    files.forEach(function (f) {
+      var s = document.createElement("script");
+      s.src = "models/" + f;
+      s.onload = s.onerror = function () { if (--left === 0) start(); };
+      document.body.appendChild(s);
+    });
+  })();
+</script>
+</body>
+</html>
