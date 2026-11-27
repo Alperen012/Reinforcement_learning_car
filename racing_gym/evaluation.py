@@ -59,6 +59,7 @@ def model_policy(model, deterministic: bool = True) -> Policy:
 # * test (`racing-gym evaluate`, docs/results.md, challenges): random start points from TEST_SEED + i,
 #   redrawn if one lands on any of the first MAX_VALIDATION_EPISODES validation points.
 TEST_SEED = 50_000
+VALIDATION_SEED = 20_000  # only matters with track="random", where the seed also picks the track
 MAX_VALIDATION_EPISODES = 32
 
 
@@ -92,18 +93,20 @@ def run_episodes(policy: Policy, env_cfg: EnvConfig, tracks: list[str] | None = 
     for track in tracks:
         env = RaceEnv(replace(env_cfg, track=track), render_mode=render_mode)
         try:
-            n = len(env.track.centerline)
-            starts = validation_starts(n, episodes) if validation else None
-            reserved = set(validation_starts(n, MAX_VALIDATION_EPISODES))
             for i in range(episodes):
-                if starts is not None:
-                    obs, _ = env.reset(seed=seed + i, options={"start_index": starts[i]})
+                s = seed + i
+                obs, _ = env.reset(seed=s)  # with track="random" this also picks the track
+                n = len(env.track.centerline)
+                if validation:  # same seed, so the same track; only the start point is overridden
+                    obs, _ = env.reset(seed=s, options={"start_index": validation_starts(n, episodes)[i]})
                 else:
-                    obs, _ = env.reset(seed=seed + i)
                     redraw = 0
-                    while env_cfg.random_start and env.start_index in reserved:  # never test on a validation point
+                    # never test on a validation point
+                    while env_cfg.random_start and env.start_index in validation_starts(n, MAX_VALIDATION_EPISODES):
                         redraw += 1
-                        obs, _ = env.reset(seed=seed + i + redraw * 1_000_003)
+                        s = seed + i + redraw * 1_000_003
+                        obs, _ = env.reset(seed=s)
+                        n = len(env.track.centerline)
                 total, done = 0.0, False
                 while not done:
                     obs, r, term, trunc, info = env.step(policy(obs))
@@ -113,7 +116,7 @@ def run_episodes(policy: Policy, env_cfg: EnvConfig, tracks: list[str] | None = 
                         on_step(env)
                 stats = info["episode_stats"]
                 stats["return"] = total
-                stats["seed"] = seed + i
+                stats["seed"] = s  # the reset seed that reproduces this episode (with its start point)
                 results.append(stats)
         finally:
             env.close()
@@ -124,7 +127,7 @@ def validate(policy: Policy, cfg) -> dict[str, float]:
     """The checkpoint-selection score used during training (and by scripts/reselect_best.py)."""
     tracks = list(cfg.train.eval_tracks) or [cfg.env.track]
     return summarize(run_episodes(policy, replace(cfg.env, random_start=True), tracks,
-                                  episodes=cfg.train.eval_episodes, validation=True))
+                                  episodes=cfg.train.eval_episodes, seed=VALIDATION_SEED, validation=True))
 
 
 def summarize(results: list[dict[str, Any]]) -> dict[str, float]:

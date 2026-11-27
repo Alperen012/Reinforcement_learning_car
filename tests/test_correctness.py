@@ -59,6 +59,35 @@ def test_validation_mode_uses_validation_starts():
     assert set(seen) == set(validation_starts(n, 4))
 
 
+def test_recorded_seed_reproduces_the_episode_after_a_redraw():
+    cfg = EnvConfig(track="classic")
+    starts = []
+    res = run_episodes(lambda o: [0.0, -1.0], cfg, episodes=200, on_step=lambda e: starts.append(e.start_index))
+    assert any(r["seed"] > TEST_SEED + 1_000_000 for r in res), "expected at least one redraw"
+    probe = RaceEnv(cfg)
+    for r in res:
+        probe.reset(seed=r["seed"])
+        assert probe.start_index in starts
+
+
+def test_random_track_mode_can_be_validated_and_tested(tmp_path):
+    """track="random" has no track until reset(): evaluation and training must still work."""
+    from racing_gym.evaluation import VALIDATION_SEED, validate
+    from racing_gym.training import train
+
+    cfg = EnvConfig(track="random")
+    pilot = heuristic_policy(RaceEnv(EnvConfig(track="oval")))
+    test = run_episodes(pilot, cfg, episodes=3)
+    val = run_episodes(pilot, cfg, episodes=3, seed=VALIDATION_SEED, validation=True)
+    assert {r["track"] for r in test}.isdisjoint({r["track"] for r in val})  # different procedural tracks
+    exp = load_config(None, ["algo=ppo", "name=r", "env.track=random", "train.total_timesteps=600", "train.n_envs=2",
+                             "train.eval_freq=300", "train.eval_episodes=2", "env.max_steps=200",
+                             "algo_kwargs.n_steps=128", "algo_kwargs.batch_size=64"])
+    assert validate(pilot, exp)["episodes"] == 2
+    run = train(exp, seed=0, out_dir=tmp_path, verbose=0)
+    assert (run / "best_model.zip").exists()
+
+
 def test_procedural_training_tracks_are_disjoint_from_evaluation_tracks():
     gen = load_config(ROOT / "configs" / "ppo_generalize.toml")
     val = [int(t.split(":")[1]) for t in gen.train.eval_tracks if t.startswith("random:")]
