@@ -9,7 +9,28 @@ Beat a record, open a PR that adds your row, and drop your agent into the
 - Report the **mean over at least 3 training seeds**, not your best seed.
 - Anything goes in training: algorithm, hyper-parameters, reward shaping, curriculum, network size.
   The *evaluation* environment (track, car, observation, max steps) must stay as given.
-- Your PR includes: the config file, the score output, and `web/models/<you>.js` from `racing-gym export`.
+## How to submit
+
+**Option A: open an issue (no git needed, e.g. you trained in Colab)**
+
+1. Run the scoring command for your challenge and copy its output.
+2. Open a [challenge submission issue](https://github.com/Alperen012/Reinforcement_learning_car/issues/new?template=challenge_submission.md).
+3. Fill in the form, paste the score output and your config, and attach your agent file
+   (rename `my_agent.js` to `my_agent.txt` first: GitHub does not accept `.js` attachments).
+
+A maintainer checks the score and adds your row and your agent to the playground.
+
+**Option B: open a pull request**
+
+1. Fork the repo and create a branch.
+2. Add your config as `configs/<you>_<challenge>.toml`.
+3. Export your agent into the playground: `racing-gym export runs/<name>/seed0 --out web/models/<you>.js --stages 5`
+   (this also updates `web/models/manifest.js`).
+4. Add your row to the leaderboard below.
+5. Open the PR with the score output pasted in the description.
+
+Either way, others can race your agent in the playground: they can download it from your issue
+and drop it on the track right away, before it is merged.
 
 ---
 
