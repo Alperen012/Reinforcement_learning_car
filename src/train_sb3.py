@@ -391,13 +391,15 @@ def main():
     env = RaceTrackEnv(render_mode=None, dynamics_mode=args.dynamics_mode)
     env = Monitor(env)
     vec_env = DummyVecEnv([lambda: env])
-    vec_env = VecNormalize(vec_env, norm_obs=True, norm_reward=True, clip_obs=10.)
+    # Obs are already scaled to ~[0, 1] by the env; normalizing them here would require
+    # shipping VecNormalize stats to evaluate.py and the preview callback. Only rewards are normalized.
+    vec_env = VecNormalize(vec_env, norm_obs=False, norm_reward=True)
 
     # Create Evaluation Env (To save the best model)
     eval_env = RaceTrackEnv(render_mode=None, dynamics_mode=args.dynamics_mode)
     eval_env = Monitor(eval_env)
     eval_vec_env = DummyVecEnv([lambda: eval_env])
-    eval_vec_env = VecNormalize(eval_vec_env, norm_obs=True, norm_reward=False, clip_obs=10., training=False)
+    eval_vec_env = VecNormalize(eval_vec_env, norm_obs=False, norm_reward=False, training=False)
 
     # Hyperparameter-optimized PPO Model
     model = PPO(
