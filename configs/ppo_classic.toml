@@ -1,0 +1,25 @@
+# The default experiment: PPO learns to drive the "classic" track.
+# Run:  racing-gym train -c configs/ppo_classic.toml
+# Every key is optional; anything left out uses the default in racing_gym/config.py.
+
+name = "ppo_classic"
+algo = "ppo"
+
+[env]
+track = "classic"
+car = "balanced"
+random_start = true   # start each episode somewhere random on the lap: more varied experience
+max_steps = 2000
+
+[env.reward]
+progress = 1.0    # per 10 px driven forward along the track
+time = -0.05      # every step: a small push to hurry up
+crash = -20.0     # leaving the track ends the episode
+lap = 10.0
+
+[train]
+total_timesteps = 300_000
+n_envs = 8
+seeds = [0, 1, 2]
+eval_freq = 25_000
+eval_episodes = 5

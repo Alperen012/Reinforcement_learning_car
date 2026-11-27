@@ -1,0 +1,13 @@
+# DQN: value-based. The car can only choose among 9 fixed (steer, throttle) combinations
+# (env.action_type is switched to "discrete" automatically for DQN).
+name = "dqn_classic"
+algo = "dqn"
+
+[env]
+track = "classic"
+
+[train]
+total_timesteps = 300_000
+n_envs = 8
+seeds = [0, 1, 2]
+eval_freq = 25_000

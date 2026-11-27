@@ -1,0 +1,12 @@
+# TD3: off-policy with a deterministic actor; explores by adding Gaussian noise to its actions.
+name = "td3_classic"
+algo = "td3"
+
+[env]
+track = "classic"
+
+[train]
+total_timesteps = 150_000
+n_envs = 4
+seeds = [0, 1, 2]
+eval_freq = 15_000

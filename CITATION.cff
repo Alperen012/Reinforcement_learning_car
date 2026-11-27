@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use Racing Gym in teaching or research, please cite it as below."
+title: "Racing Gym: an educational reinforcement-learning racing playground"
+type: software
+authors:
+  - alias: "Alperen012"
+repository-code: "https://github.com/Alperen012/Reinforcement_learning_car"
+version: 0.2.0
+keywords:
+  - reinforcement learning
+  - gymnasium
+  - stable-baselines3
+  - education
+  - autonomous racing

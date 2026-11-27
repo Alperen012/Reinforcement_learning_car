@@ -1,0 +1,13 @@
+# A2C: like PPO but with a single gradient step per (short) rollout and no clipping.
+# Simpler, often less stable: a good contrast to PPO.
+name = "a2c_classic"
+algo = "a2c"
+
+[env]
+track = "classic"
+
+[train]
+total_timesteps = 300_000
+n_envs = 8
+seeds = [0, 1, 2]
+eval_freq = 25_000

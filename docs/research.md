@@ -1,0 +1,70 @@
+# Research: what makes RL / educational repositories worth exploring
+
+This note records what was studied before redesigning the project, and why
+some ideas were adopted and others were not. Star counts were read from the
+GitHub API on 2026-11-27. The descriptions are summarised from each project's
+README and documentation.
+
+## A. Reinforcement-learning libraries and environments
+
+| Project | Stars | What it does well | Take | Leave |
+|---|---:|---|---|---|
+| [Farama-Foundation/Gymnasium](https://github.com/Farama-Foundation/Gymnasium) | 12.9k | One small, stable API (`reset`/`step`, `terminated` vs `truncated`), an env checker, and environment registration. Its CarRacing env uses procedural tracks and a tile-based progress reward. | Strict Gymnasium API, `check_env` in the tests, `gym.register`, procedural tracks, reward tied to track progress. | CarRacing's 96×96 pixel observations need a CNN and hours of training. That is too slow for a laptop-friendly teaching tool. |
+| [DLR-RM/stable-baselines3](https://github.com/DLR-RM/stable-baselines3) | 14.1k | Reliable, documented, tested PPO/A2C/SAC/TD3/DQN behind one interface. | Use it for every algorithm. Writing our own would add bugs and teach less. | — |
+| [DLR-RM/rl-baselines3-zoo](https://github.com/DLR-RM/rl-baselines3-zoo) | 2.9k | Hyper-parameters in config files, one CLI for train/enjoy/record, benchmark tables published in the repo. | Config files per experiment, a `record` command, results published with their exact commands. | Optuna tuning and the multi-library plugin system are too much machinery for this size. |
+| [vwxyzjn/cleanrl](https://github.com/vwxyzjn/cleanrl) | 10.7k | Single-file algorithms you can read top to bottom; every benchmark is reproducible and multi-seed. | Readability as a feature. Every reported number comes from several seeds, with the command that produced it. | Single-file means copying env glue into every file. We need one shared env plus several algorithms. |
+| [ray-project/ray](https://github.com/ray-project/ray) (RLlib) | 44.4k | Scales to clusters. | — | A heavy dependency and a steep learning curve. Wrong tool for a desktop playground. |
+| [Farama-Foundation/HighwayEnv](https://github.com/Farama-Foundation/HighwayEnv) | 3.3k | Several driving tasks, configurable via a dict, multiple observation types, GIFs on the README. | Every env knob in one typed config. GIFs at the top of the README. | Many env variants at once. One well-tested env with presets is enough. |
+| [metadriverse/metadrive](https://github.com/metadriverse/metadrive) | 1.3k | Procedural maps, used to study **generalisation** to unseen roads. | The generalisation experiment: train on random tracks, test on held-out ones. | 3D engine and installation weight. |
+| [f1tenth/f1tenth_gym](https://github.com/f1tenth/f1tenth_gym) | 255 | Racing with lidar observations and a bicycle model. | Lidar + kinematic bicycle model are a proven combination for racing RL. | Real-car dynamics detail is beyond what a learner needs here. |
+
+## B. Interactive, visual ML projects
+
+| Project | Stars | Why it works |
+|---|---:|---|
+| [tensorflow/playground](https://github.com/tensorflow/playground) | 13.1k | Zero install: open a page, move a slider, see the effect immediately. |
+| [poloclub/cnn-explainer](https://github.com/poloclub/cnn-explainer) / [transformer-explainer](https://github.com/poloclub/transformer-explainer) | 9.1k / 9.2k | Shows the *internals* (activations, attention) of a real trained model, in the browser, linked to explanations. |
+| [karpathy/convnetjs](https://github.com/karpathy/convnetjs) | 11.2k | Small networks run fine in plain JavaScript; no framework needed. |
+
+What we take: a **static, zero-install browser playground** that runs real
+trained policies (exported weights, a tiny MLP in plain JS). It shows the
+agent's observation, action and reward terms live, and it can replay the
+agent at different **stages of training**. We do not train in the browser:
+SB3 in Python is the honest, reproducible training path. The browser is for
+looking, comparing and poking.
+
+## C. Educational repositories
+
+| Project | Stars | Why it works |
+|---|---:|---|
+| [openai/spinningup](https://github.com/openai/spinningup) | 12.1k | Theory and runnable code side by side. It says honestly what each algorithm is good and bad at. |
+| [huggingface/deep-rl-class](https://github.com/huggingface/deep-rl-class) | 5.1k | A linear path of units, each ending in a hands-on exercise. |
+| [labmlai/annotated_deep_learning_paper_implementations](https://github.com/labmlai/annotated_deep_learning_paper_implementations) | 67.8k | Code annotated so it can be read as a tutorial. |
+| [AtsushiSakai/PythonRobotics](https://github.com/AtsushiSakai/PythonRobotics) | 31.0k | An animated GIF for every algorithm. The README *is* the gallery. |
+
+What we take: GIFs at the top, a numbered tutorial path that ends in
+experiments you run yourself, heavily commented core modules, and results
+tables generated by commands in the repo.
+
+## Ideas rejected
+
+* **Many algorithms for their own sake.** We ship five because they teach
+  different things: on-policy vs off-policy, stochastic vs deterministic
+  actor, policy-based vs value-based (DQN needs the discrete action mode). No
+  custom implementations.
+* **Pixel observations / CNN policies.** They look impressive, but they move
+  training from minutes to hours and hide *why* the agent acts.
+* **A web backend that trains live** (FastAPI/WebSockets). It means two
+  processes to launch, state syncing, and a server to host. A static page
+  plus a Python CLI is simpler and can be hosted on GitHub Pages.
+* **A physics engine (pymunk/Box2D).** The old project had one bolted on, with
+  bugs (forces applied to one of five substeps, units off by 30×). A
+  20-line bicycle model with a grip limit is easier to read and port to JS,
+  and it is fast.
+* **Absolute x/y in the observation.** The policy then memorises one track. An
+  egocentric observation enables the generalisation experiment.
+
+## Resulting proposal
+
+See [decisions.md](decisions.md) for the decision log and
+[architecture.md](architecture.md) for the structure that came out of this.
