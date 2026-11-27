@@ -221,10 +221,21 @@ def make_track(spec: str, width: float | None = None) -> Track:
             seed = int(spec.split(":", 1)[1])
         except ValueError as exc:
             raise ValueError(f"bad track spec {spec!r}; expected 'random:<int>'") from exc
-        return random_track(seed, width=width or 80.0)
-    if spec not in PRESETS:
+        if not 0 <= seed < 2**31:
+            raise ValueError(f"random track seed must be in [0, 2**31), got {seed}")
+        track = random_track(seed, width=width or 80.0)
+    elif spec not in PRESETS:
         raise ValueError(f"unknown track {spec!r}. Presets: {sorted(PRESETS)}, or 'random:<seed>'")
-    track = PRESETS[spec]()
-    if width is not None and width != track.width:
-        track = Track(track.name, track.control_points, width=width)
+    else:
+        track = PRESETS[spec]()
+        if width is not None and width != track.width:
+            track = Track(track.name, track.control_points, width=width)
+    # Off-track ground between two nearby parts of the road. Zero or less means they overlap (a shortcut
+    # the progress reward would not see); the car must also never cover it in one step (see RaceEnv).
+    track.wall_gap = track.min_clearance() - track.width
+    if track.wall_gap <= 0:
+        raise ValueError(f"track {track.name!r} with width {track.width:g} overlaps itself; use a narrower width")
+    margin = min(track.centerline.min(), track.size - track.centerline.max()) - track.width / 2
+    if margin < 0:
+        raise ValueError(f"track {track.name!r} with width {track.width:g} extends past the edge of the world")
     return track

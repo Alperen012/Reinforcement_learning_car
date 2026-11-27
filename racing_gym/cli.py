@@ -31,7 +31,7 @@ def cmd_train(args):
 
 
 def cmd_evaluate(args):
-    from .evaluation import make_policy, run_episodes, save_json, summarize
+    from .evaluation import TEST_SEED, make_policy, run_episodes, save_json, summarize
 
     env_cfg = _env_cfg(args)
     tracks = args.tracks or [env_cfg.track]
@@ -39,7 +39,7 @@ def cmd_evaluate(args):
     for spec in args.policies:
         policy, pol_env, label = make_policy(spec, env_cfg, seed=args.seed, algo=args.algo,
                                              deterministic=not args.stochastic)
-        res = run_episodes(policy, pol_env, tracks, episodes=args.episodes, seed=10_000 + args.seed,
+        res = run_episodes(policy, pol_env, tracks, episodes=args.episodes, seed=TEST_SEED + 10_000 * args.seed,
                            render_mode="human" if args.render else None)
         rows.append({"policy": label, **summarize(res), "episodes_detail": res})
     print(f"\ntracks: {', '.join(tracks)}   episodes per track: {args.episodes}\n")
@@ -147,7 +147,8 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("policies", nargs="+", help="run directories, or: random, heuristic, untrained")
     sp.add_argument("--tracks", nargs="+", help="evaluate on these tracks (default: config track)")
     sp.add_argument("--episodes", type=int, default=10)
-    sp.add_argument("--seed", type=int, default=0)
+    sp.add_argument("--seed", type=int, default=0,
+                    help="which set of test episodes (each set is disjoint from the training-time validation set)")
     sp.add_argument("--algo", default="ppo", help="algorithm for the 'untrained' baseline")
     sp.add_argument("--stochastic", action="store_true")
     sp.add_argument("--render", action="store_true")

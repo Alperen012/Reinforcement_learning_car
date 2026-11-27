@@ -25,7 +25,7 @@ from stable_baselines3.common.env_util import make_vec_env
 from .algos import get_spec, make_model
 from .config import ExperimentConfig, dump_toml, to_dict
 from .env import REWARD_TERMS, RaceEnv
-from .evaluation import model_policy, run_episodes, summarize
+from .evaluation import model_policy, validate
 
 EPISODE_FIELDS = ["timesteps", "return", "steps", "laps", "lap_fraction", "crashed", "avg_speed", "track",
                   *[f"r_{t}" for t in REWARD_TERMS]]
@@ -39,8 +39,7 @@ class RacingCallback(BaseCallback):
     def __init__(self, cfg: ExperimentConfig, run_dir: Path, seed: int, verbose: int = 1):
         super().__init__(verbose)
         self.cfg, self.run_dir, self.seed = cfg, run_dir, seed
-        self.eval_tracks = list(cfg.train.eval_tracks) or [cfg.env.track]
-        self.best = float("-inf")
+        self.best, self.best_timesteps, self.last_eval = float("-inf"), None, None
         self.next_eval = cfg.train.eval_freq
         self.t0 = time.time()
         self._ep_file = open(run_dir / "episodes.csv", "w", newline="")
@@ -71,10 +70,11 @@ class RacingCallback(BaseCallback):
             self.evaluate()
         return True
 
-    def evaluate(self) -> dict:
-        env_cfg = replace(self.cfg.env, random_start=True)
-        res = summarize(run_episodes(model_policy(self.model), env_cfg, self.eval_tracks,
-                                     episodes=self.cfg.train.eval_episodes, seed=10_000))
+    def evaluate(self) -> dict | None:
+        if self.num_timesteps == self.last_eval:  # training ended exactly on an evaluation step
+            return None
+        self.last_eval = self.num_timesteps
+        res = validate(model_policy(self.model), self.cfg)
         row = {"timesteps": self.num_timesteps, "wall_time": round(time.time() - self.t0, 1)}
         row.update({k: round(res[k], 4) for k in EVAL_FIELDS if k in res})
         self._ev.writerow(row)
@@ -85,7 +85,7 @@ class RacingCallback(BaseCallback):
         # Snapshots let you replay (and export to the browser) the agent at every stage of learning.
         self.model.save(self.run_dir / "checkpoints" / f"step_{self.num_timesteps:09d}.zip")
         if res["return_mean"] > self.best:
-            self.best = res["return_mean"]
+            self.best, self.best_timesteps = res["return_mean"], self.num_timesteps
             self.model.save(self.run_dir / "best_model.zip")
         if self.verbose:
             print(f"[{self.cfg.name} seed{self.seed}] t={self.num_timesteps:>8} "
@@ -130,6 +130,7 @@ def train(cfg: ExperimentConfig, seed: int, out_dir: str | Path = "runs", verbos
         meta["train_seconds"] = round(time.time() - t0, 1)
         meta["timesteps"] = int(model.num_timesteps)
         meta["best_eval_return"] = callback.best
+        meta["best_timesteps"] = callback.best_timesteps  # the step best_model.zip was saved at
         (run_dir / "run.json").write_text(json.dumps(meta, indent=2))
         vec_env.close()
     return run_dir

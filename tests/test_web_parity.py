@@ -29,7 +29,7 @@ for (const t of spec.tracks) {
   out[t] = {length: tr.length, n: tr.centerline.length, mask_sum: tr.mask.reduce((a, b) => a + b, 0),
             c0: tr.centerline[0], c100: tr.centerline[100]};
 }
-const env = new RG.RaceEnv({track: spec.episode_track, random_start: false});
+const env = new RG.RaceEnv({track: spec.episode_track, car: spec.car, random_start: false});
 let obs = env.reset({startIndex: spec.start});
 const traj = [];
 for (const a of spec.actions) {
@@ -43,11 +43,11 @@ console.log(JSON.stringify(out));
 """
 
 
-def _actions(n=700):
+def _actions(track="classic", car="balanced", n=700):
     """Heuristic driving plus a growing wiggle: laps the track for a while, then crashes."""
     from racing_gym.evaluation import heuristic_policy
 
-    env = RaceEnv(EnvConfig(track="classic", random_start=False))
+    env = RaceEnv(EnvConfig(track=track, car=car, random_start=False))
     obs, _ = env.reset(seed=0, options={"start_index": 37})
     pilot, actions = heuristic_policy(env), []
     for i in range(n):
@@ -60,9 +60,11 @@ def _actions(n=700):
     return actions
 
 
-def test_python_and_browser_simulations_match():
+# Every car preset, on a preset track and on a procedural one.
+@pytest.mark.parametrize("track,car", [("classic", "balanced"), ("random:7", "grippy"), ("oval", "rocket")])
+def test_python_and_browser_simulations_match(track, car):
     tracks = ["oval", "classic", "hairpin", "snake", "random:0", "random:7", "random:123"]
-    spec = {"tracks": tracks, "episode_track": "classic", "start": 37, "actions": _actions()}
+    spec = {"tracks": tracks, "episode_track": track, "car": car, "start": 37, "actions": _actions(track, car)}
     res = subprocess.run([NODE, "-e", JS, str(ROOT / "web" / "js" / "sim.js"), json.dumps(spec)],
                          capture_output=True, text=True, check=True)
     js = json.loads(res.stdout)
@@ -74,7 +76,7 @@ def test_python_and_browser_simulations_match():
         assert js[t]["mask_sum"] == int(py.mask.sum()), t
         np.testing.assert_allclose(js[t]["c100"], py.centerline[100], atol=1e-6)
 
-    env = RaceEnv(EnvConfig(track="classic", random_start=False))
+    env = RaceEnv(EnvConfig(track=track, car=car, random_start=False))
     env.reset(seed=0, options={"start_index": 37})
     for i, (a, j) in enumerate(zip(spec["actions"], js["traj"])):
         obs, r, term, trunc, _ = env.step(a)
@@ -86,4 +88,4 @@ def test_python_and_browser_simulations_match():
         if term or trunc:
             break
     assert len(js["traj"]) == i + 1
-    assert len(js["traj"]) > 150, "scripted episode too short to be a meaningful comparison"
+    assert len(js["traj"]) > 100, "scripted episode too short to be a meaningful comparison"

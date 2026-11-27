@@ -80,7 +80,7 @@ class TrainConfig:
     n_envs: int = 8
     seeds: tuple[int, ...] = (0,)
     eval_freq: int = 25_000  # timesteps between evaluations (summed over all envs)
-    eval_episodes: int = 5
+    eval_episodes: int = 10
     eval_tracks: tuple[str, ...] = ()  # empty = the training track
     device: str = "cpu"  # small MLPs are faster on CPU
 

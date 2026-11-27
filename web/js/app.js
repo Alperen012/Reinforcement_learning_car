@@ -213,7 +213,7 @@
     s.max = r.model.stages.length - 1; s.value = r.stageIdx;
     const st = r.model.stages[r.stageIdx];
     $("stage-label").textContent = st.label;
-    $("stage-return").textContent = st.eval_return == null ? "" : `eval return ${st.eval_return.toFixed(0)}`;
+    $("stage-return").textContent = st.eval_return == null ? "" : `validation return ${st.eval_return.toFixed(0)}`;
   }
 
   function barRows(container, rows) {
@@ -365,7 +365,7 @@
 
     const car = RG.CAR_DEFAULTS;
     sliders($("car-sliders"), [
-      { key: "max_speed", label: "top speed", min: 3, max: 14, step: 0.5, value: car.max_speed },
+      { key: "max_speed", label: "top speed", min: 3, max: 12, step: 0.5, value: car.max_speed },
       { key: "engine_accel", label: "engine", min: 0.1, max: 0.8, step: 0.05, value: car.engine_accel },
       { key: "grip", label: "tyre grip", min: 0.3, max: 2.5, step: 0.05, value: car.grip },
       { key: "max_steer_deg", label: "steering lock°", min: 10, max: 45, step: 1, value: car.max_steer_deg },

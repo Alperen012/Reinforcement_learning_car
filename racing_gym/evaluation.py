@@ -52,16 +52,58 @@ def model_policy(model, deterministic: bool = True) -> Policy:
 
 
 # ----------------------------------------------------------------------------- running
+# Episodes are deterministic given the start point (deterministic physics and policy), so validation and
+# test are two disjoint sets of start points:
+# * validation (checkpoint selection during training): the first N points of a fixed, well-spread
+#   sequence around the track, identical for every checkpoint so checkpoints are compared on equal terms;
+# * test (`racing-gym evaluate`, docs/results.md, challenges): random start points from TEST_SEED + i,
+#   redrawn if one lands on any of the first MAX_VALIDATION_EPISODES validation points.
+TEST_SEED = 50_000
+MAX_VALIDATION_EPISODES = 32
+
+
+def _van_der_corput(k: int) -> float:
+    """0.5, 0.25, 0.75, 0.125, ...: any prefix is spread evenly over [0, 1)."""
+    x, denom = 0.0, 1.0
+    while k:
+        denom *= 2
+        x += (k & 1) / denom
+        k >>= 1
+    return x
+
+
+def validation_starts(n_points: int, episodes: int) -> list[int]:
+    """Centreline indices of the validation start points (a prefix of one fixed sequence)."""
+    if episodes > MAX_VALIDATION_EPISODES:
+        raise ValueError(f"at most {MAX_VALIDATION_EPISODES} validation episodes, got {episodes}")
+    return [int(_van_der_corput(i + 1) * n_points) for i in range(episodes)]
+
+
 def run_episodes(policy: Policy, env_cfg: EnvConfig, tracks: list[str] | None = None, episodes: int = 5,
-                 seed: int = 10_000, render_mode: str | None = None, on_step=None) -> list[dict[str, Any]]:
-    """Run ``episodes`` per track. Episode ``i`` always uses reset seed ``seed + i``."""
+                 seed: int = TEST_SEED, render_mode: str | None = None, on_step=None,
+                 validation: bool = False) -> list[dict[str, Any]]:
+    """Run ``episodes`` per track.
+
+    Test mode (default): episode ``i`` uses reset seed ``seed + i`` (a random start point).
+    ``validation=True``: episode ``i`` starts at ``validation_starts(...)[i]`` instead.
+    """
     tracks = list(tracks) if tracks else [env_cfg.track]
     results = []
     for track in tracks:
         env = RaceEnv(replace(env_cfg, track=track), render_mode=render_mode)
         try:
+            n = len(env.track.centerline)
+            starts = validation_starts(n, episodes) if validation else None
+            reserved = set(validation_starts(n, MAX_VALIDATION_EPISODES))
             for i in range(episodes):
-                obs, _ = env.reset(seed=seed + i)
+                if starts is not None:
+                    obs, _ = env.reset(seed=seed + i, options={"start_index": starts[i]})
+                else:
+                    obs, _ = env.reset(seed=seed + i)
+                    redraw = 0
+                    while env_cfg.random_start and env.start_index in reserved:  # never test on a validation point
+                        redraw += 1
+                        obs, _ = env.reset(seed=seed + i + redraw * 1_000_003)
                 total, done = 0.0, False
                 while not done:
                     obs, r, term, trunc, info = env.step(policy(obs))
@@ -76,6 +118,13 @@ def run_episodes(policy: Policy, env_cfg: EnvConfig, tracks: list[str] | None = 
         finally:
             env.close()
     return results
+
+
+def validate(policy: Policy, cfg) -> dict[str, float]:
+    """The checkpoint-selection score used during training (and by scripts/reselect_best.py)."""
+    tracks = list(cfg.train.eval_tracks) or [cfg.env.track]
+    return summarize(run_episodes(policy, replace(cfg.env, random_start=True), tracks,
+                                  episodes=cfg.train.eval_episodes, validation=True))
 
 
 def summarize(results: list[dict[str, Any]]) -> dict[str, float]:
