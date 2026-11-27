@@ -52,6 +52,10 @@
         <select id="add-kind" aria-label="Driver to add"></select>
         <button id="btn-add">+ Add</button>
       </div>
+      <label class="upload" title="A .js file made by `racing-gym export` (or the Colab notebook)">
+        <input type="file" id="upload" accept=".js,.json" hidden>
+        <span>⬆ Race <b>your own</b> trained agent: drop or pick its <code>.js</code> file</span>
+      </label>
       <div id="stage-box" class="stage-box" hidden>
         <label for="stage">Training stage of <b id="stage-racer"></b></label>
         <input type="range" id="stage" min="0" max="0" step="1">

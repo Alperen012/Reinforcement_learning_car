@@ -5,7 +5,9 @@
 
 **Watch neural networks learn to race, then open them up and see why they drive the way they do.**
 
-### ▶ [Try the live playground](https://alperen012.github.io/Reinforcement_learning_car/web/): no install, runs in your browser
+### ▶ [Try the live playground](https://alperen012.github.io/Reinforcement_learning_car/web/) · 🎓 [Train your own in Colab](https://colab.research.google.com/github/Alperen012/Reinforcement_learning_car/blob/main/notebooks/racing_gym_colab.ipynb) · 🏆 [Challenges](CHALLENGES.md)
+
+No install needed: watch agents in the browser, or train one in Colab in 10 minutes and drop it into the playground to race it.
 
 A small, readable reinforcement-learning playground: a 2D racing environment
 (Gymnasium), five algorithms (Stable-Baselines3), and a **browser playground**
@@ -34,6 +36,7 @@ Open the **[live playground](https://alperen012.github.io/Reinforcement_learning
 
 * drag **Training stage** to watch the agent at any checkpoint, from untrained to fully trained,
 * **+ Add** racers: other agents, the hand-written controller, random actions, or **You** (arrow keys),
+* **drop your own agent's file** on the track (from `racing-gym export` or the Colab notebook) and race it,
 * pick a preset or a 🎲 random track (agents trained on one track struggle on others, and you can see why),
 * open **Car physics** and lower the grip: *distribution shift* in action.
 
@@ -100,7 +103,9 @@ What we read from this (best checkpoint per seed; see the curves for stability):
 
 ## Learn RL with it
 
-A path from "what is a reward?" to running your own experiments:
+Fastest start: the **[Colab notebook](https://colab.research.google.com/github/Alperen012/Reinforcement_learning_car/blob/main/notebooks/racing_gym_colab.ipynb)**
+(sensors → baselines → train → before/after GIF → race your agent in the browser).
+Then the step-by-step path from "what is a reward?" to your own experiments:
 
 1. [What is RL? Explained with a race car](docs/tutorials/01-what-is-rl.md)
 2. [Train your first agent](docs/tutorials/02-first-agent.md)
@@ -146,11 +151,24 @@ configs/*.toml ─► racing-gym train ─► runs/<name>/seed<k>/ ─► evalua
 **Hardware:** everything runs on a CPU. On an 8-core laptop: PPO ~3–4 min per 300k-step seed, SAC/TD3
 ~13 min per 150k-step seed. The playground runs in any modern browser.
 
+## Challenges
+
+Three open problems with fixed scoring commands and leaderboards: details in **[CHALLENGES.md](CHALLENGES.md)**.
+
+| challenge | current best | to beat |
+|---|---|---|
+| 🚀 **Rocket on the hairpin**: hand-coded control crashes 100% | PPO, 6 laps / 0% crashes (1 seed) | 3 seeds, more laps |
+| ⚡ **Fastest learner**: steps to a clean 6-lap drive | TD3, 30,000 steps | fewer steps |
+| 🌍 **The generalist**: 7 unseen tracks | PPO, 29% crashes | lower crash rate (hand-coded: 0%) |
+
+![Hand-written controller vs PPO on the rocket/hairpin challenge](docs/assets/rocket_hairpin.gif)
+
+<sub>Where learning beats hand-coding: with the fast, low-grip `rocket` car, the hand-written controller (left) enters the hairpin too fast and crashes every time. PPO (right) learned to brake. Where hand-coding beats learning: the generalist challenge.</sub>
+
 ## Roadmap
 
 - [ ] Domain randomisation (random grip and top speed during training) and a robustness benchmark
 - [ ] Multi-car racing with car-to-car lidar
-- [ ] Beginner notebook (Colab) walking through tutorials 1–3
 - [ ] Track editor in the playground (click control points, export a preset)
 - [ ] Recurrent policy (`sb3_contrib.RecurrentPPO`) with fewer lidar rays: memory vs perception
 

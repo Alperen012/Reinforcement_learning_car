@@ -34,6 +34,7 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 120
+extend-exclude = ["notebooks"]  # teaching notebooks favour compact plotting one-liners
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "B", "UP", "I", "SIM"]

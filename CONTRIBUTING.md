@@ -2,6 +2,8 @@
 
 Thanks for wanting to help! Good first contributions:
 
+* **Beat a challenge**: see [CHALLENGES.md](CHALLENGES.md); a leaderboard PR is the easiest way in
+
 * **A new track preset**: [docs/extending.md](docs/extending.md#add-a-track-preset)
 * **A trained agent for the playground** (a new algorithm, car or reward): train it, `racing-gym export`, open a PR with the model file and the command you used
 * **A tutorial fix**: anything that confused you is worth a PR

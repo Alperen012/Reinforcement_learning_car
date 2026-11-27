@@ -311,6 +311,39 @@
 
     const kindSel = $("add-kind");
     for (const o of driverOptions()) kindSel.add(new Option(o.label, o.value));
+
+    // Bring your own agent: a file written by `racing-gym export` (JS wrapper) or its plain JSON.
+    async function loadAgentFile(file) {
+      try {
+        const text = await file.text();
+        const json = text.trim().startsWith("{") ? text : text.slice(text.indexOf("= {") + 2, text.lastIndexOf("; })"));
+        const model = JSON.parse(json);
+        if (!Array.isArray(model.stages) || !model.stages.length || !model.env) throw new Error("not a racing-gym export");
+        let name = model.name || file.name.replace(/\.(js|json)$/, "");
+        while (MODELS[name]) name += "'";
+        model.name = name;
+        MODELS[name] = model;
+        kindSel.add(new Option(`${name} (${String(model.algo).toUpperCase()}, yours)`, "model:" + name));
+        state.racers.push(makeRacer("model:" + name));
+        select(state.racers.length - 1);
+        setBanner(`Loaded ${name}: it is racing now. Drag its training stage slider!`);
+        setTimeout(() => setBanner(""), 4000);
+      } catch (err) {
+        console.warn("agent upload failed:", err);
+        setBanner("That file is not a Racing Gym agent. Make one with `racing-gym export` or the Colab notebook.");
+        setTimeout(() => setBanner(""), 6000);
+      }
+    }
+    $("upload").addEventListener("change", (e) => { if (e.target.files[0]) loadAgentFile(e.target.files[0]); e.target.value = ""; });
+    const drop = document.querySelector(".upload");
+    for (const target of [drop, $("view")]) {
+      target.addEventListener("dragover", (e) => { e.preventDefault(); drop.classList.add("drag"); });
+      target.addEventListener("dragleave", () => drop.classList.remove("drag"));
+      target.addEventListener("drop", (e) => {
+        e.preventDefault(); drop.classList.remove("drag");
+        if (e.dataTransfer.files[0]) loadAgentFile(e.dataTransfer.files[0]);
+      });
+    }
     $("btn-add").addEventListener("click", () => {
       state.racers.push(makeRacer(kindSel.value));
       select(state.racers.length - 1);

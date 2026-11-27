@@ -1,0 +1,15 @@
+# Starter config for challenge 1 (CHALLENGES.md): the rocket car on the hairpin track.
+# The hand-written controller crashes 100% of the time here. Change anything below except
+# env.track and env.car, then score with the command in CHALLENGES.md.
+name = "challenge_rocket_hairpin"
+algo = "ppo"
+
+[env]
+track = "hairpin"
+car = "rocket"
+
+[train]
+total_timesteps = 400_000
+n_envs = 8
+seeds = [0, 1, 2]
+eval_freq = 25_000
