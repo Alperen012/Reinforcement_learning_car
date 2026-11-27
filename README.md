@@ -1,6 +1,11 @@
 ﻿# 🏁 Racing Gym
 
+[![tests](https://github.com/Alperen012/Reinforcement_learning_car/actions/workflows/tests.yml/badge.svg)](https://github.com/Alperen012/Reinforcement_learning_car/actions/workflows/tests.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **Watch neural networks learn to race, then open them up and see why they drive the way they do.**
+
+### ▶ [Try the live playground](https://alperen012.github.io/Reinforcement_learning_car/web/): no install, runs in your browser
 
 A small, readable reinforcement-learning playground: a 2D racing environment
 (Gymnasium), five algorithms (Stable-Baselines3), and a **browser playground**
@@ -15,7 +20,7 @@ where trained agents race each other, you, and their own untrained selves.
 Most RL examples are either a 50-line script that prints a reward number, or
 a research framework you need a week to understand. This sits in between:
 
-* 🎮 **Play first.** Open `web/index.html`: no install, no server. Race the agents, scrub through their training, change the car's grip and watch them fail.
+* 🎮 **Play first.** Open the [live playground](https://alperen012.github.io/Reinforcement_learning_car/web/) (or `web/index.html` locally): no install, no server. Race the agents, scrub through their training, change the car's grip and watch them fail.
 * 🔍 **See inside.** Every step shows *what the agent sees* (17 numbers), *what it does*, and *which reward term* paid for it.
 * 🧪 **Experiment in one line.** Every reward weight, physics constant and hyper-parameter is a config value: `racing-gym train -c configs/ppo_classic.toml -s env.reward.crash=0`
 * 📏 **Honest numbers.** Every comparison includes a random policy, the untrained network and a hand-written controller, over several seeds. Every result in [docs/results.md](docs/results.md) is produced by a command in this repo.
@@ -25,14 +30,14 @@ a research framework you need a week to understand. This sits in between:
 
 ![Playground: a trained PPO agent racing its untrained self, with live observation, action and reward panels](docs/assets/playground.png)
 
-Open **`web/index.html`** in a browser (double-click works). Then:
+Open the **[live playground](https://alperen012.github.io/Reinforcement_learning_car/web/)**, or `web/index.html` from a clone (double-click works). Then:
 
 * drag **Training stage** to watch the agent at any checkpoint, from untrained to fully trained,
 * **+ Add** racers: other agents, the hand-written controller, random actions, or **You** (arrow keys),
 * pick a preset or a 🎲 random track (agents trained on one track struggle on others, and you can see why),
 * open **Car physics** and lower the grip: *distribution shift* in action.
 
-Deep links: `web/index.html?track=random:42&speed=2`.
+Deep links work too, e.g. [a random track at 2× speed](https://alperen012.github.io/Reinforcement_learning_car/web/?track=random:42&speed=2).
 
 ## Quick start (Python ≥ 3.11)
 
@@ -146,7 +151,6 @@ configs/*.toml ─► racing-gym train ─► runs/<name>/seed<k>/ ─► evalua
 - [ ] Domain randomisation (random grip and top speed during training) and a robustness benchmark
 - [ ] Multi-car racing with car-to-car lidar
 - [ ] Beginner notebook (Colab) walking through tutorials 1–3
-- [ ] GitHub Pages deployment of the playground
 - [ ] Track editor in the playground (click control points, export a preset)
 - [ ] Recurrent policy (`sb3_contrib.RecurrentPPO`) with fewer lidar rays: memory vs perception
 
