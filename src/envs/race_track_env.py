@@ -68,10 +68,11 @@ class RaceTrackEnv(gym.Env):
         self.aero_drag = 0.005
 
         # Physics mode parameters
-        self.physics_dt = 1.0 / self.metadata["render_fps"]
+        # pymunk works in px/s, the rest of the env in px/step. Forces are derived from the
+        # normal-mode accel/drag params (px/step^2) so both modes share the same longitudinal tuning.
+        self.physics_fps = float(self.metadata["render_fps"])
+        self.physics_dt = 1.0 / self.physics_fps
         self.physics_mass = 1200.0
-        self.physics_force = 4200.0
-        self.physics_brake_force = 5200.0
         self.physics_lateral_grip = 0.22
         self.physics_angular_damping = 0.88
 
@@ -286,27 +287,30 @@ class RaceTrackEnv(gym.Env):
         forward_speed = float(np.dot(velocity, forward))
         lateral_speed = float(np.dot(velocity, right))
 
-        if acceleration >= 0.0:
-            force_mag = acceleration * self.physics_force
-        else:
-            force_mag = acceleration * self.physics_brake_force
-
-        engine_force = forward * force_mag
-        self.physics_body.apply_force_at_world_point(tuple(engine_force), tuple(self.physics_body.position))
+        fps = self.physics_fps
+        # px/step^2 -> px/s^2 is a factor of fps^2
+        accel_per_step = acceleration * (self.engine_accel if acceleration >= 0.0 else self.brake_accel)
+        engine_force = tuple(forward * (self.physics_mass * accel_per_step * fps * fps))
 
         lateral_impulse = -lateral_speed * self.physics_mass * self.physics_lateral_grip
         self.physics_body.apply_impulse_at_world_point(tuple(right * lateral_impulse), tuple(self.physics_body.position))
-
-        speed_norm = float(np.linalg.norm(velocity))
-        drag_force = -velocity * (45.0 + 0.35 * speed_norm)
-        self.physics_body.apply_force_at_world_point(tuple(drag_force), tuple(self.physics_body.position))
 
         desired_yaw_rate = (forward_speed / max(self.wheel_base, 1e-4)) * math.tan(self.steering_angle)
         self.physics_body.angular_velocity += (desired_yaw_rate - self.physics_body.angular_velocity) * 0.35
         self.physics_body.angular_velocity *= self.physics_angular_damping
 
+        # pymunk resets body.force after every space.step(), so forces must be re-applied each substep.
         sub_dt = self.physics_dt / self.physics_substeps
         for _ in range(self.physics_substeps):
+            pos = tuple(self.physics_body.position)
+            self.physics_body.apply_force_at_world_point(engine_force, pos)
+            velocity = np.array(self.physics_body.velocity, dtype=np.float32)
+            speed_px_s = float(np.linalg.norm(velocity))
+            if speed_px_s > 1e-3:
+                v_step = speed_px_s / fps
+                drag_per_step = self.rolling_drag + self.aero_drag * v_step * v_step
+                drag_force = -(velocity / speed_px_s) * (self.physics_mass * drag_per_step * fps * fps)
+                self.physics_body.apply_force_at_world_point(tuple(drag_force), pos)
             self.physics_space.step(sub_dt)
 
         self.x = float(self.physics_body.position.x)
@@ -317,12 +321,12 @@ class RaceTrackEnv(gym.Env):
         forward = np.array([math.cos(self.angle), math.sin(self.angle)], dtype=np.float32)
         forward_speed = float(np.dot(velocity, forward))
 
-        clipped_speed = float(np.clip(forward_speed, -self.max_reverse_speed, self.max_speed))
+        clipped_speed = float(np.clip(forward_speed, -self.max_reverse_speed * fps, self.max_speed * fps))
         if clipped_speed != forward_speed:
             velocity += (clipped_speed - forward_speed) * forward
             self.physics_body.velocity = tuple(velocity)
 
-        self.speed = clipped_speed
+        self.speed = clipped_speed / fps  # px/step, same unit as normal mode
 
     def _get_obs(self):
         return np.array([
