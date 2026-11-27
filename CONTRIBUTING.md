@@ -33,3 +33,6 @@ pytest          # ~1 minute; the parity tests need Node.js (skipped otherwise)
 
 Describe what changed and why, and how you tested it. Link an issue if there is
 one. Small PRs are reviewed faster than big ones.
+
+By contributing, you agree that your contribution is released under the project's
+[MIT licence](LICENSE).

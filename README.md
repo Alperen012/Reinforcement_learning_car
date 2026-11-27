@@ -158,6 +158,4 @@ See [CITATION.cff](CITATION.cff).
 
 ## License
 
-No license has been chosen for this repository yet. Until one is added, default
-copyright applies, which means others may view the code but not reuse it.
-Choosing an open-source license (e.g. MIT) is up to the repository owner.
+[MIT](LICENSE): use it, change it, teach with it.

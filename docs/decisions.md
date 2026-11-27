@@ -57,6 +57,7 @@ Every evaluation table includes `random`, `untrained` and a hand-written
 episodes. The heuristic shows what three lines of classical control achieve,
 which keeps claims about RL honest.
 
-### D10. Licence left unchanged
-The repository had no licence when this work started. Picking one is the
-owner's decision, so none was added.
+### D10. MIT licence
+The repository had no licence when the rewrite started. The owner chose MIT
+afterwards, the most common licence for educational code, which lets anyone
+reuse it in courses and projects.

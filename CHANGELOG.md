@@ -6,6 +6,7 @@ A rewrite into an educational RL racing playground. See [docs/audit.md](docs/aud
 for why each part changed and [docs/decisions.md](docs/decisions.md) for the design choices.
 
 ### Added
+- MIT licence.
 - `racing_gym` package with a `racing-gym` CLI: `train`, `evaluate`, `watch`, `play`, `record`, `plot`, `export`, `tracks`.
 - Spline tracks: 4 presets (`oval`, `classic`, `hairpin`, `snake`) and seeded procedural tracks (`random:<seed>`).
 - Egocentric observation (lidar, speed, wheel angle, heading error, lateral offset, curvature ahead).

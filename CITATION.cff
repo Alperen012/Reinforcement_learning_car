@@ -6,6 +6,7 @@ authors:
   - alias: "Alperen012"
 repository-code: "https://github.com/Alperen012/Reinforcement_learning_car"
 version: 0.2.0
+license: MIT
 keywords:
   - reinforcement learning
   - gymnasium
