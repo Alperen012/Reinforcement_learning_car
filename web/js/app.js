@@ -6,6 +6,7 @@
   const $ = (id) => document.getElementById(id);
   const COLORS = ["#ffb347", "#6ec6ff", "#c792ea", "#5fd38d", "#ff6b5e", "#f7e463", "#ff8ad8", "#9be7d8"];
   const STEPS_PER_SECOND = 30;
+  const TOUCH = window.matchMedia("(pointer: coarse)").matches;  // phones and tablets
 
   const state = {
     trackSpec: "classic",
@@ -175,6 +176,8 @@
 
   // ------------------------------------------------------------------ side panels
   function renderRacerList() {
+    // On-screen arrows: touch devices only, and only while someone is driving.
+    $("touch-pad").hidden = !(TOUCH && state.racers.some((r) => r.kind === "human"));
     const ul = $("racer-list");
     ul.innerHTML = "";
     state.racers.forEach((r, i) => {
@@ -386,6 +389,13 @@
       state.keys[k] = true;
     });
     window.addEventListener("keyup", (e) => { state.keys[e.key.length === 1 ? e.key.toLowerCase() : e.key] = false; });
+    // Touch arrows press the same keys as the keyboard.
+    document.querySelectorAll("#touch-pad button").forEach((b) => {
+      const set = (down) => (e) => { e.preventDefault(); state.keys[b.dataset.key] = down; };
+      b.addEventListener("pointerdown", set(true));
+      ["pointerup", "pointercancel", "pointerleave"].forEach((t) => b.addEventListener(t, set(false)));
+      b.addEventListener("contextmenu", (e) => e.preventDefault());
+    });
     $("view").addEventListener("click", (e) => {
       const rect = e.target.getBoundingClientRect();
       const scale = 1000 / Math.min(rect.width, rect.height);

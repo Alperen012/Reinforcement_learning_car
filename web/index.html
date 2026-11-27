@@ -41,7 +41,14 @@
       <canvas id="view" width="1000" height="1000" aria-label="Race track view"></canvas>
       <div id="banner" class="banner" hidden></div>
     </div>
-    <p class="hint">Add a racer called <b>You</b> to drive with the arrow keys or WASD. Click a car or a racer in the list to inspect it.</p>
+    <div id="touch-pad" class="touch-pad" hidden>
+      <button data-key="ArrowLeft" aria-label="Steer left">◀</button>
+      <button data-key="ArrowRight" aria-label="Steer right">▶</button>
+      <span></span>
+      <button data-key="ArrowDown" aria-label="Brake">▼</button>
+      <button data-key="ArrowUp" aria-label="Accelerate">▲</button>
+    </div>
+    <p class="hint">Add a racer called <b>You</b> to drive with the arrow keys or WASD (on a phone: the arrows under the track). Click a car or a racer in the list to inspect it.</p>
   </section>
 
   <aside class="side">

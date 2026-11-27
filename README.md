@@ -26,7 +26,7 @@ a research framework you need a week to understand. This sits in between:
 * 🔍 **See inside.** Every step shows *what the agent sees* (17 numbers), *what it does*, and *which reward term* paid for it.
 * 🧪 **Experiment in one line.** Every reward weight, physics constant and hyper-parameter is a config value: `racing-gym train -c configs/ppo_classic.toml -s env.reward.crash=0`
 * 📏 **Honest numbers.** Every comparison includes a random policy, the untrained network and a hand-written controller, over several seeds. Every result in [docs/results.md](docs/results.md) is produced by a command in this repo.
-* 📖 **Readable.** ~1,500 lines of commented Python. The car physics is one 30-line function.
+* 📖 **Readable.** Under 2,000 lines of commented Python. The car physics is one 30-line function.
 
 ## The playground
 
@@ -70,7 +70,7 @@ racing-gym evaluate runs/quickstart/seed0 heuristic untrained random --track ova
 | **Algorithms** | PPO, A2C, SAC, TD3, DQN via [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3). Adding one is one registry entry. |
 | **Tooling** | `train` · `evaluate` · `watch` · `play` · `record` (GIFs) · `plot` (learning curves) · `export` (to the browser) · `tracks` |
 | **Logging** | Per-run directory: resolved config, versions, CSV of every episode and evaluation, TensorBoard, checkpoints. |
-| **Tests** | 43 pytest tests, including a check that the browser simulator matches Python step for step. |
+| **Tests** | 44 pytest tests, including a check that the browser simulator matches Python step for step. |
 
 ![Built-in tracks](docs/assets/tracks.png)
 

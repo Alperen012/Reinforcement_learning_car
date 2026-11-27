@@ -16,7 +16,7 @@ for why each part changed and [docs/decisions.md](docs/decisions.md) for the des
 - Baseline policies for every comparison: random, untrained, and a hand-written heuristic.
 - Browser playground (`web/`): race exported agents, replay training stages, inspect observation, action and reward live, tweak physics.
 - Pygame renderer with reward and observation panels. GIF recording. Learning-curve plots.
-- Tutorials (`docs/tutorials/`), benchmark results with commands (`docs/results.md`), 43 tests and a CI workflow.
+- Tutorials (`docs/tutorials/`), benchmark results with commands (`docs/results.md`), 44 tests and a CI workflow.
 
 ### Changed
 - Progress reward is now signed distance along the centre line. The old clipped checkpoint reward could be farmed by rocking back and forth.
