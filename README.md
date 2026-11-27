@@ -8,7 +8,7 @@ where trained agents race each other, you, and their own untrained selves.
 
 ![The same PPO agent after 25k steps (crashes), 50k steps (cautious) and 300k steps (racing line)](docs/assets/learning_stages.gif)
 
-<sub>One PPO agent at three moments of its training, on the same track. Left: 25k steps, it crashes. Middle: 50k, it drives but carefully. Right: 300k, flat out on the racing line. Trains in about 4 minutes on a laptop CPU.</sub>
+<sub>One PPO agent at three moments of its training, on the same track. Left: 25k steps, it crashes. Middle: 50k, it drives but carefully. Right: 300k, flat out on the racing line. Trains in 4–5 minutes on a laptop CPU.</sub>
 
 ## Why this exists
 
@@ -71,7 +71,27 @@ racing-gym evaluate runs/quickstart/seed0 heuristic untrained random --track ova
 Measured on a laptop CPU (Intel i7-11800H), 3 seeds per algorithm. Full table,
 learning curves and the exact commands: **[docs/results.md](docs/results.md)**.
 
-<!-- results-summary -->
+| policy (classic track, 10 episodes × 3 seeds) | laps in 2000 steps | crash rate | train time / seed |
+|---|---:|---:|---:|
+| random actions | 0.00 | 40% | — |
+| hand-written controller | 5.00 | 0% | — |
+| **PPO** (300k steps) | **7.00 ± 0.00** | 0% | 3.5 min |
+| A2C (300k) | 6.70 ± 0.42 | 0% | 3.5 min |
+| TD3 (150k) | 6.33 ± 0.47 | 0% | 6.4 min |
+| SAC (150k) | 6.00 ± 0.00 | 0% | 14.6 min |
+| DQN (300k, 9 discrete actions) | 4.87 ± 0.90 | 27% ± 25 | 3.1 min |
+
+![Evaluation return during training](docs/assets/algorithms.png)
+
+What we read from this (best checkpoint per seed; see the curves for stability):
+
+* Every algorithm beats the hand-written controller, and PPO does so on every seed.
+* Off-policy methods (TD3, SAC) need fewer environment steps but more wall-clock time. TD3's curve
+  drops sharply near the end of training, a classic instability that keeping the best checkpoint hides.
+* DQN with only 9 coarse actions is the least stable by far (wide band, 27% crashes).
+* **Generalisation:** on 7 unseen tracks, PPO trained only on `classic` crashes in 56% of episodes. Trained
+  on random tracks, it crashes in 29%. Better, but still short of the hand-written controller (0%).
+  That gap is an open problem worth working on (see the roadmap).
 
 ## Learn RL with it
 
