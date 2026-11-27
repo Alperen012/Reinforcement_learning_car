@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.0 (unreleased)
+## 0.2.0 (2026-11-27)
 
 A rewrite into an educational RL racing playground. See [docs/audit.md](docs/audit.md)
 for why each part changed and [docs/decisions.md](docs/decisions.md) for the design choices.
