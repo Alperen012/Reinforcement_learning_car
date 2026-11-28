@@ -1,0 +1,18 @@
+# ppo_generalize.toml plus domain randomisation: every training episode gets a new random track
+# AND a new car, with grip, max_speed and engine_accel each scaled by a factor in [0.8, 1.2].
+# Validation and test always use the nominal car, so results compare directly with ppo_generalize.
+name = "ppo_generalize_dr"
+algo = "ppo"
+
+[env]
+track = "random"
+car_randomize = 0.2
+
+[train]
+total_timesteps = 1_000_000
+n_envs = 8
+seeds = [0, 1, 2]
+eval_freq = 50_000
+eval_episodes = 2
+# Validation tracks (disjoint from the test tracks random:0-4, hairpin, snake).
+eval_tracks = ["random:500", "random:501", "random:502", "random:503", "classic"]

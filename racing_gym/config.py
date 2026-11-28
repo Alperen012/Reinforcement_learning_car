@@ -56,6 +56,9 @@ class EnvConfig:
     track: str = "classic"  # preset name, "random:<seed>", or "random" (new track every episode)
     track_width: float | None = None  # None = the track's own width
     car: str | CarConfig = "balanced"  # preset name or explicit parameters
+    # Domain randomisation: at every reset, scale grip, max_speed and engine_accel of the car above by
+    # independent factors drawn from U(1 - r, 1 + r). 0 = off. Training only: evaluation always uses the car as is.
+    car_randomize: float = 0.0
     reward: RewardConfig = field(default_factory=RewardConfig)
     action_type: str = "continuous"  # "continuous" [steer, throttle] or "discrete" (9 actions)
     n_rays: int = 9  # lidar rays spread over -90..+90 degrees

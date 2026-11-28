@@ -65,7 +65,7 @@ racing-gym evaluate runs/quickstart/seed0 heuristic untrained random --track ova
 |---|---|
 | **Environment** | `RacingGym-v0`, standard Gymnasium API. Continuous `[steer, throttle]` or 9 discrete actions. Egocentric 17-dim observation: 9 lidar rays, speed, wheel angle, heading error, lateral offset, curvature ahead. |
 | **Tracks** | 4 presets + unlimited seeded procedural tracks (`random:<seed>`). |
-| **Car** | Kinematic bicycle model with a tyre-grip limit (it understeers if you corner too fast). Presets `balanced`, `grippy`, `rocket`. |
+| **Car** | Kinematic bicycle model with a tyre-grip limit (it understeers if you corner too fast). Presets `balanced`, `grippy`, `rocket`. Optional domain randomisation for training: `env.car_randomize = 0.2` scales grip, top speed and acceleration by a random factor in [0.8, 1.2] at every reset (evaluation always uses the nominal car). |
 | **Reward** | progress along the track + time penalty + crash penalty + lap bonus (+ optional centring and smooth-steering terms). Each term is logged separately. |
 | **Algorithms** | PPO, A2C, SAC, TD3, DQN via [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3). Adding one is one registry entry. |
 | **Tooling** | `train` · `evaluate` · `watch` · `play` · `record` (GIFs) · `plot` (learning curves) · `export` (to the browser) · `tracks` |
@@ -172,7 +172,8 @@ Three open problems with fixed scoring commands and leaderboards: details in **[
 
 ## Roadmap
 
-- [ ] Domain randomisation (random grip and top speed during training) and a robustness benchmark
+- [x] Domain randomisation (random grip and top speed during training): `env.car_randomize`
+- [ ] A robustness benchmark (evaluate with a different car than the one trained on)
 - [ ] Multi-car racing with car-to-car lidar
 - [ ] Track editor in the playground (click control points, export a preset)
 - [ ] Recurrent policy (`sb3_contrib.RecurrentPPO`) with fewer lidar rays: memory vs perception

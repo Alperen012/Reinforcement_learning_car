@@ -87,11 +87,12 @@ def run_episodes(policy: Policy, env_cfg: EnvConfig, tracks: list[str] | None = 
 
     Test mode (default): episode ``i`` uses reset seed ``seed + i`` (a random start point).
     ``validation=True``: episode ``i`` starts at ``validation_starts(...)[i]`` instead.
+    Always uses the nominal car: ``car_randomize`` is for training only.
     """
     tracks = list(tracks) if tracks else [env_cfg.track]
     results = []
     for track in tracks:
-        env = RaceEnv(replace(env_cfg, track=track), render_mode=render_mode)
+        env = RaceEnv(replace(env_cfg, track=track, car_randomize=0.0), render_mode=render_mode)
         try:
             for i in range(episodes):
                 s = seed + i
@@ -187,9 +188,10 @@ def make_policy(kind: str, env_cfg: EnvConfig, seed: int = 0, algo: str = "ppo",
         return model_policy(model, deterministic), env_cfg, f"untrained {algo}"
     model_path, run_cfg = find_model(kind)
     model = load_model(str(model_path), run_cfg.algo)
-    # Keep the caller's track/start settings, but the agent's own observation/action/car setup.
+    # Keep the caller's track/start settings, but the agent's own observation/action/car setup
+    # (its nominal car: domain randomisation is for training only).
     agent_env = replace(run_cfg.env, track=env_cfg.track, random_start=env_cfg.random_start,
-                        max_steps=env_cfg.max_steps, stall_steps=env_cfg.stall_steps)
+                        max_steps=env_cfg.max_steps, stall_steps=env_cfg.stall_steps, car_randomize=0.0)
     label = f"{run_cfg.name} ({run_cfg.algo})"
     if model_path.parent.name == "checkpoints":
         step = int(model_path.stem.split("_")[-1])
