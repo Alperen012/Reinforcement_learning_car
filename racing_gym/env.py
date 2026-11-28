@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 from functools import lru_cache
 from typing import Any
 
@@ -63,7 +64,9 @@ class RaceEnv(gym.Env):
 
             config = _build(EnvConfig, config, "env")
         self.config = config
-        self.car_params = config.car_config()
+        self.base_car = self.car_params = config.car_config()
+        if not 0.0 <= config.car_randomize < 1.0:
+            raise ValueError(f"car_randomize must be in [0, 1), got {config.car_randomize}")
         self.reward_cfg: RewardConfig = config.reward
         if render_mode is not None and render_mode not in self.metadata["render_modes"]:
             raise ValueError(f"render_mode must be one of {self.metadata['render_modes']}")
@@ -149,15 +152,21 @@ class RaceEnv(gym.Env):
         elif self.config.track == "random":
             track_seed = int(self.np_random.integers(TRAIN_SEED_OFFSET, 2**31 - 1))
             self.track = _cached_track(f"random:{track_seed}", self.config.track_width)
+        n = len(self.track.centerline)
+        start = int(self.np_random.integers(n)) if self.config.random_start else 0
+        start = int(options.get("start_index", start)) % n
 
+        r = self.config.car_randomize
+        if r:  # drawn last, so the track and start point are the same as without randomisation
+            b = self.base_car
+            f = self.np_random.uniform(1.0 - r, 1.0 + r, size=3)
+            self.car_params = replace(b, grip=b.grip * f[0], max_speed=b.max_speed * f[1],
+                                      engine_accel=b.engine_accel * f[2])
         if self.car_params.max_speed >= self.track.wall_gap:
             # Collisions are checked once per step, so a car this fast could jump through the gap between
             # two parts of the track without ever touching the grass.
             raise ValueError(f"car max_speed {self.car_params.max_speed:g} px/step is not below the narrowest wall "
                              f"of track {self.track.name!r} ({self.track.wall_gap:.1f} px)")
-        n = len(self.track.centerline)
-        start = int(self.np_random.integers(n)) if self.config.random_start else 0
-        start = int(options.get("start_index", start)) % n
         cx, cy = self.track.centerline[start]
         self.car = CarState(x=float(cx), y=float(cy), yaw=self.track.heading_at(start))
         self._idx = self.start_index = start

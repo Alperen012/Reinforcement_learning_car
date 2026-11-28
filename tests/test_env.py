@@ -149,3 +149,63 @@ def test_rgb_render_produces_image():
     frame = env.render()
     env.close()
     assert frame.ndim == 3 and frame.shape[2] == 3 and frame.std() > 10
+
+
+# ----------------------------------------------------------------------------- domain randomisation
+def test_car_randomize_off_by_default_keeps_episodes_unchanged():
+    # Recorded before car_randomize existed: being off must not draw from the reset RNG.
+    env = RaceEnv(EnvConfig(track="random"))
+    got = []
+    for s in range(3):
+        env.reset(seed=s)
+        got.append((env.track.name, env.start_index))
+        assert env.car_params == env.base_car
+    assert got == [("random:1826701764", 380), ("random:1016165517", 309), ("random:1798679810", 137)]
+
+
+def test_car_randomize_is_seeded_in_range_and_keeps_track_and_start():
+    r = 0.3
+    plain, dr = RaceEnv(EnvConfig(track="random")), RaceEnv(EnvConfig(track="random", car_randomize=r))
+    base, cars = dr.base_car, []
+    for s in range(50):
+        plain.reset(seed=s)
+        dr.reset(seed=s)
+        assert (dr.track.name, dr.start_index) == (plain.track.name, plain.start_index)
+        p = dr.car_params
+        for k in ("grip", "max_speed", "engine_accel"):
+            assert (1 - r) * getattr(base, k) <= getattr(p, k) <= (1 + r) * getattr(base, k)
+        assert replace(p, grip=base.grip, max_speed=base.max_speed, engine_accel=base.engine_accel) == base
+        assert p.max_speed < dr.track.wall_gap
+        cars.append(p)
+    assert len({c.grip for c in cars}) == len(cars)  # a new car every episode
+    assert dr.base_car == base  # the base car is never mutated
+    again = RaceEnv(EnvConfig(track="random", car_randomize=r))
+    again.reset(seed=7)
+    assert again.car_params == cars[7]
+
+
+def test_car_randomize_respects_the_wall_gap_check():
+    # hairpin's narrowest wall is ~55 px: fine for the base car (40 px/step), not for all of 40 * U(0.5, 1.5)
+    from racing_gym.config import CarConfig
+
+    env = RaceEnv(EnvConfig(track="hairpin", car=CarConfig(max_speed=40.0), car_randomize=0.5))
+    with pytest.raises(ValueError, match="narrowest wall"):
+        for s in range(200):
+            env.reset(seed=s)
+    with pytest.raises(ValueError, match="car_randomize"):
+        RaceEnv(EnvConfig(car_randomize=1.0))
+
+
+def test_evaluation_never_randomizes_the_car(monkeypatch):
+    seen = []
+    orig = RaceEnv.reset
+
+    def spy(self, **kw):
+        out = orig(self, **kw)
+        seen.append(self.car_params == self.base_car)
+        return out
+
+    monkeypatch.setattr(RaceEnv, "reset", spy)
+    env_cfg = EnvConfig(track="oval", car_randomize=0.5)
+    run_episodes(lambda obs: np.array([0.0, 0.0], dtype=np.float32), replace(env_cfg, max_steps=5), episodes=3)
+    assert seen and all(seen)

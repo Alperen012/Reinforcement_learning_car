@@ -98,8 +98,8 @@ select checkpoints on these 7 tracks. That is why the command uses `final_model.
 | 1 | baseline | PPO on random tracks (`configs/ppo_generalize.toml`) | 19% | 5.57 | 3 |
 | 2 | baseline | PPO on `classic` only | 56% | 3.27 | 3 |
 
-Ideas that might help: domain randomisation of the car, more lidar rays, a recurrent policy,
-or reward terms that punish risky lines.
+Ideas that might help: domain randomisation of the car (`env.car_randomize`, see
+`configs/ppo_generalize_dr.toml`), more lidar rays, a recurrent policy, or reward terms that punish risky lines.
 
 ---
 
