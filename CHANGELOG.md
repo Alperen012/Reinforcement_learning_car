@@ -1,14 +1,12 @@
 # Changelog
 
-## Unreleased
+## Unreleased: correctness audit, domain randomisation
 
 ### Added
 - Domain randomisation (#4): `env.car_randomize = r` scales grip, max_speed and engine_accel by
   independent factors in [1 - r, 1 + r] at every training reset. Off by default (existing runs are
   unchanged); evaluation and checkpoint selection always use the nominal car. Example:
   `configs/ppo_generalize_dr.toml`.
-
-## Unreleased: correctness audit
 
 ### Fixed
 - `racing-gym evaluate` (and the README/challenge commands) evaluated on reset seeds 10,000+, the same
