@@ -51,10 +51,10 @@ Score = mean **laps** (higher is better). Ties are broken by lower crash rate.
 |---|---|---|---:|---:|---:|---|
 | — | baseline | hand-written controller | 0.00 | 100% | — | — |
 | — | baseline | random actions | 0.00 | 70% | — | — |
-| 1 | baseline | PPO, starter config (400k steps) | 6.00 | 0% | **1** ⚠ | `PPO rocket` in the playground |
+| 1 | baseline | PPO, starter config (400k steps) | 5.67 | 0% | 3 | `PPO rocket` in the playground (seed 0) |
 
-⚠ A single training seed: the first leaderboard entry with 3 seeds takes this spot even with
-equal laps.
+Per seed: 6.00, 6.00, 5.00 laps (± 0.47 across seeds). Seeds 1 and 2 spent about 250k steps
+creeping forward without crashing (0.1 laps) before they learned to drive: budget for a slow start.
 
 ![Hand-written controller vs PPO, rocket car on hairpin](docs/assets/rocket_hairpin.gif)
 
