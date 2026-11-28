@@ -32,6 +32,7 @@
 - New regression tests: validation/test disjointness, lap bonus on re-crossing the line, track
   validity, physics limits for every car preset, export labels and timesteps, Python/JS parity for
   every car preset and every exported output transform.
+- Rocket-on-hairpin baseline now uses 3 training seeds: 5.67 laps, 0% crashes (was 1 seed, 6.00).
 
 ## 0.2.0 (2026-11-27)
 
