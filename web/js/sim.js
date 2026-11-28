@@ -211,8 +211,11 @@
     const key = spec + "|" + (width == null ? "" : width);
     if (trackCache.has(key)) return trackCache.get(key);
     let track;
-    if (spec.startsWith("random:")) track = randomTrack(parseInt(spec.slice(7), 10), width || 80.0);
-    else if (spec in PRESETS) {
+    if (spec.startsWith("random:")) {
+      const seed = Number(spec.slice(7));  // same rule as Python: an integer in [0, 2**31)
+      if (!Number.isInteger(seed) || seed < 0 || seed >= 2 ** 31) throw new Error("bad track " + spec);
+      track = randomTrack(seed, width || 80.0);
+    } else if (spec in PRESETS) {
       track = PRESETS[spec]();
       if (width != null && width !== track.width) track = new Track(track.name, track.controlPoints, width);
     } else throw new Error("unknown track " + spec);

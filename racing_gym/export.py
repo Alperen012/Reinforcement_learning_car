@@ -71,8 +71,19 @@ def forward(layers, output: str, obs: np.ndarray):
     return x
 
 
-def _verified_layers(model_path: Path, cfg) -> tuple[list[dict[str, Any]], str]:
-    """Extract layers and check them against SB3 on real observations before trusting the export."""
+def _check(layers, output: str, model, obs) -> None:
+    ours = forward(layers, output, obs)
+    theirs = model.predict(obs, deterministic=True)[0]
+    if not np.allclose(np.asarray(ours, dtype=float), np.asarray(theirs, dtype=float), atol=1e-4):
+        raise RuntimeError(f"exported forward pass disagrees with SB3: {ours} vs {theirs}")
+
+
+def _verified_layers(model_path: Path, cfg) -> tuple[list[dict[str, Any]], str, int]:
+    """Extract layers and check them against SB3 before trusting the export.
+
+    Checked on 200 observations from real driving and 200 drawn uniformly from the observation
+    space (states the agent rarely visits). Also returns the timestep the model was saved at.
+    """
     from .algos import load_model
     from .env import RaceEnv
 
@@ -81,16 +92,27 @@ def _verified_layers(model_path: Path, cfg) -> tuple[list[dict[str, Any]], str]:
     env = RaceEnv(cfg.env)
     obs, _ = env.reset(seed=0)
     for _ in range(200):
-        ours = forward(layers, output, obs)
-        theirs = model.predict(obs, deterministic=True)[0]
-        if not np.allclose(np.asarray(ours, dtype=float), np.asarray(theirs, dtype=float), atol=1e-4):
-            raise RuntimeError(f"exported forward pass disagrees with SB3: {ours} vs {theirs}")
-        obs, _, term, trunc, _ = env.step(theirs)
+        _check(layers, output, model, obs)
+        obs, _, term, trunc, _ = env.step(model.predict(obs, deterministic=True)[0])
         if term or trunc:
             obs, _ = env.reset()
+    env.observation_space.seed(0)
+    for _ in range(200):
+        _check(layers, output, model, env.observation_space.sample())
     rounded = [{"w": np.round(layer["w"], 6).tolist(), "b": np.round(layer["b"], 6).tolist(), "act": layer["act"]}
                for layer in layers]
-    return rounded, output
+    return rounded, output, int(model.num_timesteps)
+
+
+def stage_label(path: Path, timesteps: int) -> str:
+    """What a stage is, in words, from the file it came from and the step it was saved at."""
+    if timesteps == 0:
+        return "untrained"
+    if path.name == "best_model.zip":
+        return f"best checkpoint ({timesteps:,} steps)"
+    if path.name == "final_model.zip":
+        return f"end of training ({timesteps:,} steps)"
+    return f"after {timesteps:,} steps"
 
 
 def _eval_returns(run_dir: Path) -> dict[int, float]:
@@ -112,26 +134,27 @@ def export_policy(run_or_model: str | Path, out: str | Path, name: str | None = 
     """
     model_path, cfg = find_model(run_or_model)
     run_dir = model_path.parent
+    if run_dir.name == "checkpoints":
+        run_dir = run_dir.parent
     returns = _eval_returns(run_dir)
-    picks: list[tuple[int | None, Path]] = []
-    ckpts = sorted((run_dir / "checkpoints").glob("step_*.zip"))
+    final_layers, output, final_t = _verified_layers(model_path, cfg)
+    picks: list[Path] = []
     if stages > 1:
-        if len(ckpts) < 2:
-            raise FileNotFoundError(f"no training checkpoints in {run_dir / 'checkpoints'}; retrain to export stages")
+        # Only checkpoints from before the exported model, so the stage slider always moves forward in time.
+        ckpts = [c for c in sorted((run_dir / "checkpoints").glob("step_*.zip")) if int(c.stem.split("_")[1]) < final_t]
+        if not ckpts:
+            raise FileNotFoundError(f"no training checkpoints before step {final_t} in {run_dir / 'checkpoints'}")
         # Learning is fastest early on, so space the stages geometrically (in checkpoint index).
-        idx = np.unique(np.round(np.geomspace(1, len(ckpts), stages)).astype(int) - 1)
-        picks = [(int(ckpts[i].stem.split("_")[1]), ckpts[i]) for i in idx[:-1]]
-    meta = json.loads((run_dir / "run.json").read_text()) if (run_dir / "run.json").exists() else {}
-    picks.append((meta.get("timesteps"), model_path))
+        idx = np.unique(np.round(np.geomspace(1, len(ckpts), stages - 1)).astype(int) - 1)
+        picks = [ckpts[i] for i in idx]
 
     stage_list = []
-    for t, path in picks:
-        layers, output = _verified_layers(path, cfg)
-        if path == model_path:
-            label, ret = "fully trained", meta.get("best_eval_return")
-        else:
-            label, ret = ("untrained" if t == 0 else f"after {t:,} steps"), returns.get(t)
-        stage_list.append({"label": label, "timesteps": t, "eval_return": ret, "layers": layers})
+    for path in picks:
+        layers, _, t = _verified_layers(path, cfg)
+        stage_list.append({"label": stage_label(path, t), "timesteps": t, "eval_return": returns.get(t),
+                           "layers": layers})
+    stage_list.append({"label": stage_label(model_path, final_t), "timesteps": final_t,
+                       "eval_return": returns.get(final_t), "layers": final_layers})
 
     name = name or cfg.name
     payload = {"name": name, "algo": cfg.algo, "description": description, "env": to_dict(cfg.env),

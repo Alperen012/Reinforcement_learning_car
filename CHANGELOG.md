@@ -1,5 +1,38 @@
 # Changelog
 
+## Unreleased: correctness audit
+
+### Fixed
+- `racing-gym evaluate` (and the README/challenge commands) evaluated on reset seeds 10,000+, the same
+  episodes training used to pick `best_model.zip`. Evaluation now uses a disjoint test set (D11).
+- Exported playground stages reported the end-of-training step for the best checkpoint (e.g. PPO
+  "fully trained, 303,104 steps" was really saved at 250,000). The step is now read from the model
+  file, stages are strictly increasing, and labels say "best checkpoint (N steps)".
+- Training logged the last evaluation twice when the budget ended exactly on an evaluation step.
+- Preset tracks with a `track_width` override could overlap themselves (a shortcut the progress reward
+  does not see) or leave the world; such tracks are now rejected. Negative or non-integer
+  `random:<seed>` specs are rejected in Python and the browser (they produced different tracks).
+- A car faster than the narrowest wall of a track could jump through it between collision checks;
+  `RaceEnv` now refuses that combination, and the playground top-speed slider stops at 12 px/step.
+- README: "every algorithm beats the hand-written controller" was false for DQN as published (4.87 laps,
+  27% crashes). With the new validation DQN's best checkpoints lap 6.00 with 0% crashes, but its final
+  weights crash in 73% of episodes; the README and results now show both.
+- The generalist baseline's seeds 0-1 had been validated on its own test tracks (the config was fixed
+  earlier, the runs were not). They are re-selected on disjoint tracks and a third seed is trained.
+  The published generalisation numbers used final weights and were not affected by this.
+- docs/results.md: best-checkpoint numbers are now shown next to final-weight numbers, which reveal
+  that TD3 and DQN collapse late in training.
+
+### Changed
+- Checkpoint selection uses 10 evenly spread validation start points (was 5 random ones).
+  `scripts/reselect_best.py` re-selects finished runs with the current protocol.
+- `docs/results.md` adds the selected checkpoint's step, a validation-to-test gap table and notes on
+  what the comparison can and cannot show.
+- The playground ships all five algorithms (A2C, SAC and TD3 added), with honest stage labels.
+- New regression tests: validation/test disjointness, lap bonus on re-crossing the line, track
+  validity, physics limits for every car preset, export labels and timesteps, Python/JS parity for
+  every car preset and every exported output transform.
+
 ## 0.2.0 (2026-11-27)
 
 A rewrite into an educational RL racing playground. See [docs/audit.md](docs/audit.md)

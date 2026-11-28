@@ -150,12 +150,17 @@ class RaceEnv(gym.Env):
             track_seed = int(self.np_random.integers(TRAIN_SEED_OFFSET, 2**31 - 1))
             self.track = _cached_track(f"random:{track_seed}", self.config.track_width)
 
+        if self.car_params.max_speed >= self.track.wall_gap:
+            # Collisions are checked once per step, so a car this fast could jump through the gap between
+            # two parts of the track without ever touching the grass.
+            raise ValueError(f"car max_speed {self.car_params.max_speed:g} px/step is not below the narrowest wall "
+                             f"of track {self.track.name!r} ({self.track.wall_gap:.1f} px)")
         n = len(self.track.centerline)
         start = int(self.np_random.integers(n)) if self.config.random_start else 0
         start = int(options.get("start_index", start)) % n
         cx, cy = self.track.centerline[start]
         self.car = CarState(x=float(cx), y=float(cy), yaw=self.track.heading_at(start))
-        self._idx = start
+        self._idx = self.start_index = start
         self.s, self.lateral = self._project()
         self.lidar = self._lidar()
 

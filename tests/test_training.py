@@ -48,7 +48,19 @@ def test_train_save_load_evaluate_export(algo, tmp_path):
     text = out.read_text()
     assert "RG_MODELS" in text and (out.parent / "manifest.js").exists()
     payload = json.loads(text[text.index("= {") + 2: text.rindex("; })")])
-    assert len(payload["stages"]) >= 2 and payload["stages"][0]["label"] == "untrained"
+    stages = payload["stages"]
+    assert len(stages) >= 2 and stages[0]["label"] == "untrained"
+    # Stages move forward in time and the last one is exactly the checkpoint that was exported.
+    ts = [s["timesteps"] for s in stages]
+    assert ts == sorted(set(ts)), ts
+    from racing_gym.algos import load_model
+
+    best_t = load_model(str(run / "best_model.zip"), algo).num_timesteps
+    assert ts[-1] == best_t == meta["best_timesteps"]
+    assert stages[-1]["label"] == f"best checkpoint ({best_t:,} steps)"
+    with open(run / "evals.csv") as fh:
+        best_row = max(csv.DictReader(fh), key=lambda r: float(r["return_mean"]))
+    assert int(best_row["timesteps"]) == best_t
 
 
 def test_exported_network_matches_stable_baselines(tmp_path):
@@ -67,8 +79,9 @@ def test_exported_network_matches_stable_baselines(tmp_path):
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="node not installed")
-def test_browser_runs_exported_policy_identically(tmp_path):
-    run = train(_tiny("sac"), seed=0, out_dir=tmp_path, verbose=0)
+@pytest.mark.parametrize("algo", ["ppo", "a2c", "sac", "td3", "dqn"])  # every output transform
+def test_browser_runs_exported_policy_identically(algo, tmp_path):
+    run = train(_tiny(algo), seed=0, out_dir=tmp_path, verbose=0)
     out = export_policy(run, tmp_path / "m.js", name="m")
     cfg = load_config(run / "config.toml")
     from racing_gym.env import RaceEnv
@@ -79,6 +92,8 @@ def test_browser_runs_exported_policy_identically(tmp_path):
     for _ in range(20):
         obs, *_ = env.step(env.action_space.sample())
         batch.append(obs.tolist())
+    env.observation_space.seed(1)
+    batch += [env.observation_space.sample().tolist() for _ in range(20)]  # states the agent rarely visits
     js = ("require(process.argv[1]); const RG = require(process.argv[2]); const m = globalThis.RG_MODELS.m;"
           "const s = m.stages[m.stages.length-1];"
           "const net = {layers: s.layers, output: m.output};"
@@ -87,9 +102,10 @@ def test_browser_runs_exported_policy_identically(tmp_path):
                          capture_output=True, text=True, check=True)
     from racing_gym.algos import load_model
 
-    model = load_model(str(run / "best_model.zip"), "sac")
+    model = load_model(str(run / "best_model.zip"), algo)
     expected = [model.predict(np.array(o, dtype=np.float32), deterministic=True)[0] for o in batch]
-    np.testing.assert_allclose(json.loads(res.stdout), expected, atol=1e-4)
+    ours = np.array(json.loads(res.stdout), dtype=float)
+    np.testing.assert_allclose(ours, np.array(expected, dtype=float), atol=1e-4)
 
 
 def test_cli_evaluate_baselines(capsys, tmp_path):

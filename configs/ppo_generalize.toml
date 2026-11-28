@@ -9,7 +9,7 @@ track = "random"
 [train]
 total_timesteps = 1_000_000
 n_envs = 8
-seeds = [0, 1]
+seeds = [0, 1, 2]
 eval_freq = 50_000
 eval_episodes = 2
 # Validation tracks for picking best_model: disjoint from the test tracks used in docs/results.md

@@ -61,3 +61,16 @@ which keeps claims about RL honest.
 The repository had no licence when the rewrite started. The owner chose MIT
 afterwards, the most common licence for educational code, which lets anyone
 reuse it in courses and projects.
+
+### D11. Validation and test episodes are disjoint by construction
+An episode is fully determined by its start point (deterministic physics and
+policy). Checkpoint selection during training ("validation") uses the first N
+points of one fixed, well-spread sequence around the track (van der Corput,
+N = `train.eval_episodes`, default 10). Every checkpoint drives the same
+points, so they are compared on equal terms. Reported numbers ("test":
+`racing-gym evaluate`, `docs/results.md`, the challenges) use random start
+points from reset seeds 50,000+, redrawn whenever one lands on any of the first
+32 validation points. Before v0.3 the CLI `evaluate` used reset seeds
+10,000+, the very episodes the best checkpoint had been chosen on.
+`docs/results.md` reports the validation-to-test gap as a check that selection
+did not overfit.

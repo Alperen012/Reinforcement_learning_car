@@ -22,4 +22,4 @@ total_timesteps = 300_000
 n_envs = 8
 seeds = [0, 1, 2]
 eval_freq = 25_000
-eval_episodes = 5
+eval_episodes = 10
